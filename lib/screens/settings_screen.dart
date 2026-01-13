@@ -1,9 +1,15 @@
+import 'dart:io';
+import 'package:csv/csv.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:my_first_app/providers/settings_provider.dart';
+import 'package:my_first_app/services/database_helper.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -13,6 +19,57 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  Future<void> _exportData() async {
+    try {
+      final records = await DatabaseHelper.instance.readAllRecords();
+
+      List<List<dynamic>> rows = [];
+      // Header
+      rows.add([
+        'ID',
+        'Date',
+        'Time',
+        'Systolic (mmHg)',
+        'Diastolic (mmHg)',
+        'Heart Rate (bpm)',
+        'Note',
+        'Created At',
+      ]);
+
+      for (var record in records) {
+        final date = DateTime.fromMillisecondsSinceEpoch(record.measureTimeMs);
+        rows.add([
+          record.id,
+          DateFormat('yyyy-MM-dd').format(date),
+          DateFormat('HH:mm').format(date),
+          record.systolic,
+          record.diastolic,
+          record.heartRate ?? '',
+          record.note ?? '',
+          DateTime.fromMillisecondsSinceEpoch(
+            record.createdAtMs,
+          ).toIso8601String(),
+        ]);
+      }
+
+      String csv = const ListToCsvConverter().convert(rows);
+
+      final directory = await getTemporaryDirectory();
+      final path =
+          '${directory.path}/blood_pressure_data_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final file = File(path);
+      await file.writeAsString(csv);
+
+      await Share.shareXFiles([XFile(path)], text: '我的血压记录');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('导出失败: $e')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,9 +132,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               color: Colors.grey[200],
               shape: BoxShape.circle,
               image: const DecorationImage(
-                image: NetworkImage(
-                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-                ),
+                image: AssetImage('assets/images/avatar.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -87,7 +142,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '张三',
+                '耳朵Strive',
                 style: GoogleFonts.notoSans(
                   textStyle: const TextStyle(
                     fontSize: 18,
@@ -246,7 +301,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     color: Colors.grey,
                   ),
                   showBorder: true,
-                  onTap: () {},
+                  onTap: _exportData,
                 ),
                 _buildListItem(
                   icon: FontAwesomeIcons.cloudArrowUp,

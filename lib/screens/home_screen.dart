@@ -58,7 +58,7 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               Text(
-                '张三',
+                '耳朵Strive',
                 style: GoogleFonts.notoSans(
                   textStyle: const TextStyle(
                     color: Colors.black,
@@ -77,9 +77,7 @@ class HomeScreen extends ConsumerWidget {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.grey[100]!),
               image: const DecorationImage(
-                image: NetworkImage(
-                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
-                ),
+                image: AssetImage('assets/images/avatar.jpg'),
                 fit: BoxFit.cover,
               ),
             ),

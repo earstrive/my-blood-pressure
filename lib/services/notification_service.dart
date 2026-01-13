@@ -66,6 +66,49 @@ class NotificationService {
     );
   }
 
+  Future<void> rescheduleDailyReminder({
+    required int id,
+    required String title,
+    required String body,
+    required TimeOfDay time,
+    bool skipToday = false,
+  }) async {
+    // Cancel existing
+    await cancelNotification(id);
+
+    var scheduledDate = _nextInstanceOfTime(time);
+
+    if (skipToday) {
+      final now = tz.TZDateTime.now(tz.local);
+      // If the scheduled time is today, move it to tomorrow
+      if (scheduledDate.year == now.year &&
+          scheduledDate.month == now.month &&
+          scheduledDate.day == now.day) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+    }
+
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduledDate,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'daily_reminder_channel',
+          '每日提醒',
+          channelDescription: '提醒您测量血压',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
   tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate = tz.TZDateTime(

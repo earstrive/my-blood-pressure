@@ -5,7 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:my_first_app/models/blood_pressure_record.dart';
 import 'package:my_first_app/providers/record_provider.dart';
+import 'package:my_first_app/providers/settings_provider.dart';
 import 'package:my_first_app/services/database_helper.dart';
+import 'package:my_first_app/services/notification_service.dart';
 
 class AddRecordScreen extends ConsumerStatefulWidget {
   const AddRecordScreen({super.key});
@@ -71,6 +73,23 @@ class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
         if (tagId != null) {
           await dbHelper.addTagToRecord(recordId, tagId);
         }
+      }
+    }
+
+    // Smart Reminder: If record is for today, skip today's reminder
+    final settings = ref.read(settingsProvider);
+    if (settings.reminderEnabled) {
+      final now = DateTime.now();
+      if (_selectedDate.year == now.year &&
+          _selectedDate.month == now.month &&
+          _selectedDate.day == now.day) {
+        await NotificationService().rescheduleDailyReminder(
+          id: 1,
+          title: '记得测量血压',
+          body: '晚上好！现在是测量血压的最佳时间。',
+          time: settings.reminderTime,
+          skipToday: true,
+        );
       }
     }
 
