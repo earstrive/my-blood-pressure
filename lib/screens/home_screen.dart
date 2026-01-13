@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:my_first_app/providers/record_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -28,9 +29,9 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     _buildSummaryCard(ref),
                     const SizedBox(height: 32),
-                    _buildWeeklyTrend(),
+                    _buildWeeklyTrend(ref),
                     const SizedBox(height: 32),
-                    _buildRecentRecords(),
+                    _buildRecentRecords(ref),
                   ],
                 ),
               ),
@@ -326,7 +327,9 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeeklyTrend() {
+  Widget _buildWeeklyTrend(WidgetRef ref) {
+    final weeklyTrendAsync = ref.watch(weeklyTrendProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -375,77 +378,105 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ],
             ),
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: 160,
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: FlTitlesData(
-                  show: true,
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (double value, TitleMeta meta) {
-                        const style = TextStyle(
-                          color: Colors.grey,
-                          fontSize: 10,
-                        );
-                        String text;
-                        switch (value.toInt()) {
-                          case 0:
-                            text = '周一';
-                            break;
-                          case 1:
-                            text = '周二';
-                            break;
-                          case 2:
-                            text = '周三';
-                            break;
-                          case 3:
-                            text = '周四';
-                            break;
-                          case 4:
-                            text = '周五';
-                            break;
-                          case 5:
-                            text = '周六';
-                            break;
-                          case 6:
-                            text = '周日';
-                            break;
-                          default:
-                            text = '';
-                        }
-                        return SideTitleWidget(
-                          axisSide: meta.axisSide,
-                          space: 4,
-                          child: Text(text, style: style),
-                        );
-                      },
+            child: weeklyTrendAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err')),
+              data: (data) {
+                // Check if all data is empty
+                final allEmpty = data.every((d) => d['hasData'] == false);
+                if (allEmpty) {
+                  return const Center(child: Text('近7天暂无数据'));
+                }
+
+                return BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    maxY: 160,
+                    barTouchData: BarTouchData(enabled: false),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (double value, TitleMeta meta) {
+                            const style = TextStyle(
+                              color: Colors.grey,
+                              fontSize: 10,
+                            );
+
+                            // Map index to weekday string
+                            // data is reversed (last 7 days), index 0 is 6 days ago, index 6 is today
+                            // But our provider returns data from 6 days ago to today in order?
+                            // Let's check provider logic.
+                            // Provider loop: for (int i = 6; i >= 0; i--) -> 6 days ago ... today.
+                            // So index 0 is 6 days ago.
+                            if (value < 0 || value >= data.length)
+                              return const SizedBox();
+
+                            final dayData = data[value.toInt()];
+                            final weekday = dayData['weekday'] as int;
+
+                            String text;
+                            switch (weekday) {
+                              case 1:
+                                text = '周一';
+                                break;
+                              case 2:
+                                text = '周二';
+                                break;
+                              case 3:
+                                text = '周三';
+                                break;
+                              case 4:
+                                text = '周四';
+                                break;
+                              case 5:
+                                text = '周五';
+                                break;
+                              case 6:
+                                text = '周六';
+                                break;
+                              case 7:
+                                text = '周日';
+                                break;
+                              default:
+                                text = '';
+                            }
+                            return SideTitleWidget(
+                              axisSide: meta.axisSide,
+                              space: 4,
+                              child: Text(text, style: style),
+                            );
+                          },
+                        ),
+                      ),
+                      leftTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                     ),
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    barGroups: data.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      final sys = item['systolic'] as double;
+                      final hasData = item['hasData'] as bool;
+
+                      return _makeBarGroup(
+                        index,
+                        hasData ? sys : 0,
+                        0, // Not using diastolic for bar height yet, or maybe stacked? keeping simple for now
+                      );
+                    }).toList(),
                   ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                ),
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: [
-                  _makeBarGroup(0, 120, 80),
-                  _makeBarGroup(1, 115, 75),
-                  _makeBarGroup(2, 130, 85),
-                  _makeBarGroup(3, 118, 78),
-                  _makeBarGroup(4, 122, 82),
-                  _makeBarGroup(5, 110, 70),
-                  _makeBarGroup(6, 105, 65),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -472,7 +503,9 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentRecords() {
+  Widget _buildRecentRecords(WidgetRef ref) {
+    final recentRecordsAsync = ref.watch(recentRecordsProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -489,21 +522,44 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _buildRecordItem(
-            sys: 120,
-            dia: 80,
-            time: '今天, 08:30',
-            pulse: 72,
-            isDay: true,
-            tag: '咖啡',
-          ),
-          const SizedBox(height: 12),
-          _buildRecordItem(
-            sys: 115,
-            dia: 74,
-            time: '昨天, 22:15',
-            pulse: 68,
-            isDay: false,
+          recentRecordsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Text('Error: $err'),
+            data: (records) {
+              if (records.isEmpty) {
+                return const Text('暂无记录');
+              }
+              return Column(
+                children: records.map((item) {
+                  final r = item.record;
+                  final date = DateTime.fromMillisecondsSinceEpoch(
+                    r.measureTimeMs,
+                  );
+                  final isToday =
+                      date.day == DateTime.now().day &&
+                      date.month == DateTime.now().month &&
+                      date.year == DateTime.now().year;
+
+                  final timeStr = DateFormat('HH:mm').format(date);
+                  final displayTime = isToday
+                      ? '今天, $timeStr'
+                      : DateFormat('MM月dd日, HH:mm', 'zh_CN').format(date);
+                  final isDay = date.hour >= 6 && date.hour < 18;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildRecordItem(
+                      sys: r.systolic,
+                      dia: r.diastolic,
+                      time: displayTime,
+                      pulse: r.heartRate ?? 0,
+                      isDay: isDay,
+                      tag: item.tags.isNotEmpty ? item.tags.first.name : null,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),

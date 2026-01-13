@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:my_first_app/models/blood_pressure_record.dart';
+import 'package:my_first_app/providers/record_provider.dart';
 import 'package:my_first_app/services/database_helper.dart';
 
-class AddRecordScreen extends StatefulWidget {
+class AddRecordScreen extends ConsumerStatefulWidget {
   const AddRecordScreen({super.key});
 
   @override
-  State<AddRecordScreen> createState() => _AddRecordScreenState();
+  ConsumerState<AddRecordScreen> createState() => _AddRecordScreenState();
 }
 
-class _AddRecordScreenState extends State<AddRecordScreen> {
+class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
   final TextEditingController _systolicController = TextEditingController(
@@ -73,6 +75,8 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
     }
 
     if (mounted) {
+      ref.invalidate(recordsProvider);
+      ref.invalidate(dailyAverageProvider);
       Navigator.pop(context);
     }
   }

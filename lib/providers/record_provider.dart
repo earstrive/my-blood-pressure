@@ -2,9 +2,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:my_first_app/models/blood_pressure_record.dart';
 import 'package:my_first_app/services/database_helper.dart';
 
+class RecordWithTags {
+  final BloodPressureRecord record;
+  final List<Tag> tags;
+
+  RecordWithTags({required this.record, required this.tags});
+}
+
 // Provider for all records
 final recordsProvider = FutureProvider<List<BloodPressureRecord>>((ref) async {
   return await DatabaseHelper.instance.readAllRecords();
+});
+
+// Provider for recent records with tags
+final recentRecordsProvider = FutureProvider<List<RecordWithTags>>((ref) async {
+  final records = await ref.watch(recordsProvider.future);
+  if (records.isEmpty) return [];
+
+  // Take top 2
+  final recent = records.take(2).toList();
+  final dbHelper = DatabaseHelper.instance;
+
+  List<RecordWithTags> result = [];
+  for (var record in recent) {
+    final tags = await dbHelper.getTagsForRecord(record.id!);
+    result.add(RecordWithTags(record: record, tags: tags));
+  }
+  return result;
 });
 
 // Provider for daily average
@@ -93,4 +117,55 @@ final dailyAverageProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     'status': status,
     'lastUpdated': lastUpdated,
   };
+});
+
+// Provider for weekly trend
+final weeklyTrendProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  final records = await ref.watch(recordsProvider.future);
+
+  // Last 7 days including today
+  final now = DateTime.now();
+  final List<Map<String, dynamic>> result = [];
+
+  for (int i = 6; i >= 0; i--) {
+    final day = now.subtract(Duration(days: i));
+    final startOfDay = DateTime(
+      day.year,
+      day.month,
+      day.day,
+    ).millisecondsSinceEpoch;
+    final endOfDay = DateTime(
+      day.year,
+      day.month,
+      day.day,
+      23,
+      59,
+      59,
+    ).millisecondsSinceEpoch;
+
+    final dayRecords = records.where((r) {
+      return r.measureTimeMs >= startOfDay && r.measureTimeMs <= endOfDay;
+    }).toList();
+
+    double avgSys = 0;
+    double avgDia = 0;
+
+    if (dayRecords.isNotEmpty) {
+      final totalSys = dayRecords.fold(0, (sum, r) => sum + r.systolic);
+      final totalDia = dayRecords.fold(0, (sum, r) => sum + r.diastolic);
+      avgSys = totalSys / dayRecords.length;
+      avgDia = totalDia / dayRecords.length;
+    }
+
+    result.add({
+      'weekday': day.weekday, // 1 = Monday, 7 = Sunday
+      'systolic': avgSys,
+      'diastolic': avgDia,
+      'hasData': dayRecords.isNotEmpty,
+    });
+  }
+
+  return result;
 });
