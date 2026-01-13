@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:my_first_app/models/blood_pressure_record.dart';
+import 'package:my_first_app/services/database_helper.dart';
 
 class AddRecordScreen extends StatefulWidget {
   const AddRecordScreen({super.key});
@@ -13,24 +15,112 @@ class AddRecordScreen extends StatefulWidget {
 class _AddRecordScreenState extends State<AddRecordScreen> {
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
-  final TextEditingController _systolicController = TextEditingController(text: '120');
-  final TextEditingController _diastolicController = TextEditingController(text: '80');
-  final TextEditingController _heartRateController = TextEditingController(text: '72');
+  final TextEditingController _systolicController = TextEditingController(
+    text: '120',
+  );
+  final TextEditingController _diastolicController = TextEditingController(
+    text: '80',
+  );
+  final TextEditingController _heartRateController = TextEditingController(
+    text: '72',
+  );
   final TextEditingController _noteController = TextEditingController();
 
   // Mock tags for UI
-  final List<Map<String, dynamic>> _tags = [
-    {'name': '咖啡', 'icon': FontAwesomeIcons.mugHot, 'selected': true},
-    {'name': '运动', 'icon': FontAwesomeIcons.personRunning, 'selected': false},
-    {'name': '服药', 'icon': FontAwesomeIcons.pills, 'selected': false},
-    {'name': '熬夜', 'icon': FontAwesomeIcons.bed, 'selected': false},
-  ];
+  List<Map<String, dynamic>> _tags = [];
+
+  Future<void> _saveRecord() async {
+    final int? systolic = int.tryParse(_systolicController.text);
+    final int? diastolic = int.tryParse(_diastolicController.text);
+    final int? heartRate = int.tryParse(_heartRateController.text);
+
+    if (systolic == null || diastolic == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请输入有效的收缩压和舒张压')));
+      return;
+    }
+
+    final DateTime measureTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+
+    final record = BloodPressureRecord(
+      systolic: systolic,
+      diastolic: diastolic,
+      heartRate: heartRate,
+      measureTimeMs: measureTime.millisecondsSinceEpoch,
+      note: _noteController.text.isEmpty ? null : _noteController.text,
+      createdAtMs: DateTime.now().millisecondsSinceEpoch,
+      updatedAtMs: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    final dbHelper = DatabaseHelper.instance;
+    final recordId = await dbHelper.createRecord(record);
+
+    // Save tags
+    for (var tagMap in _tags) {
+      if (tagMap['selected'] as bool) {
+        final tagId = tagMap['id'] as int?;
+        if (tagId != null) {
+          await dbHelper.addTagToRecord(recordId, tagId);
+        }
+      }
+    }
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
     _selectedTime = TimeOfDay.now();
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    final dbHelper = DatabaseHelper.instance;
+    final tags = await dbHelper.getAllTags();
+
+    if (mounted) {
+      setState(() {
+        _tags = tags.map((tag) {
+          IconData icon;
+          // Map tag name to icon
+          switch (tag.name) {
+            case '咖啡':
+              icon = FontAwesomeIcons.mugHot;
+              break;
+            case '运动':
+              icon = FontAwesomeIcons.personRunning;
+              break;
+            case '服药':
+              icon = FontAwesomeIcons.pills;
+              break;
+            case '熬夜':
+              icon = FontAwesomeIcons.bed;
+              break;
+            default:
+              icon = FontAwesomeIcons.tag;
+          }
+
+          return {
+            'id': tag.id,
+            'name': tag.name,
+            'icon': icon,
+            'selected': false,
+            'color': tag.color,
+          };
+        }).toList();
+      });
+    }
   }
 
   @override
@@ -118,10 +208,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
             child: Text(
               '取消',
               style: GoogleFonts.notoSans(
-                textStyle: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 16,
-                ),
+                textStyle: const TextStyle(color: Colors.grey, fontSize: 16),
               ),
             ),
           ),
@@ -136,10 +223,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
             ),
           ),
           TextButton(
-            onPressed: () {
-              // TODO: Implement save logic
-              Navigator.pop(context);
-            },
+            onPressed: _saveRecord,
             child: Text(
               '保存',
               style: GoogleFonts.notoSans(
@@ -158,7 +242,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
 
   Widget _buildDateTimePicker() {
     final dateFormat = DateFormat('MM月dd日', 'zh_CN');
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -180,7 +264,11 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
             onTap: _pickDate,
             child: Row(
               children: [
-                const Icon(FontAwesomeIcons.calendar, color: Colors.blue, size: 20),
+                const Icon(
+                  FontAwesomeIcons.calendar,
+                  color: Colors.blue,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   dateFormat.format(_selectedDate),
@@ -199,7 +287,11 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
             onTap: _pickTime,
             child: Row(
               children: [
-                const Icon(FontAwesomeIcons.clock, color: Colors.blue, size: 20),
+                const Icon(
+                  FontAwesomeIcons.clock,
+                  color: Colors.blue,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   _selectedTime.format(context),
@@ -295,10 +387,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
           Text(
             'mmHg',
             style: GoogleFonts.notoSans(
-              textStyle: const TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
+              textStyle: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
           const SizedBox(height: 8),
@@ -306,9 +395,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
             height: 4,
             width: double.infinity,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color[300]!, color[500]!],
-              ),
+              gradient: LinearGradient(colors: [color[300]!, color[500]!]),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -345,7 +432,11 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
-                  child: Icon(FontAwesomeIcons.heartPulse, color: Colors.red, size: 18),
+                  child: Icon(
+                    FontAwesomeIcons.heartPulse,
+                    color: Colors.red,
+                    size: 18,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -389,10 +480,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
               Text(
                 'BPM',
                 style: GoogleFonts.notoSans(
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  textStyle: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ),
             ],
@@ -430,7 +518,10 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                   });
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? Colors.blue[50] : Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -453,7 +544,9 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                           textStyle: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: isSelected ? Colors.blue[600] : Colors.grey[500],
+                            color: isSelected
+                                ? Colors.blue[600]
+                                : Colors.grey[500],
                           ),
                         ),
                       ),
@@ -470,11 +563,16 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: Colors.grey[300]!,
-                  style: BorderStyle.solid, // Dashed border is tricky without custom painter, using solid for now or specialized package
+                  style: BorderStyle
+                      .solid, // Dashed border is tricky without custom painter, using solid for now or specialized package
                 ),
               ),
               child: const Center(
-                child: Icon(FontAwesomeIcons.plus, size: 14, color: Colors.grey),
+                child: Icon(
+                  FontAwesomeIcons.plus,
+                  size: 14,
+                  color: Colors.grey,
+                ),
               ),
             ),
           ],
@@ -519,9 +617,7 @@ class _AddRecordScreenState extends State<AddRecordScreen> {
               borderSide: const BorderSide(color: Colors.blue),
             ),
           ),
-          style: GoogleFonts.notoSans(
-            textStyle: const TextStyle(fontSize: 14),
-          ),
+          style: GoogleFonts.notoSans(textStyle: const TextStyle(fontSize: 14)),
         ),
       ],
     );
