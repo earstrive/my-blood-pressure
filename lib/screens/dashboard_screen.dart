@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:my_first_app/screens/add_record_screen.dart';
 import 'package:my_first_app/screens/history_screen.dart';
 import 'package:my_first_app/screens/home_screen.dart';
+import 'package:my_first_app/screens/settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -17,17 +18,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<Widget> _pages = [
     const HomeScreen(),
     const HistoryScreen(),
-    const Placeholder(), // Settings placeholder
+    const SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
               onPressed: () {
