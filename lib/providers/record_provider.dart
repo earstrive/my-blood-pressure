@@ -31,6 +31,99 @@ final recentRecordsProvider = FutureProvider<List<RecordWithTags>>((ref) async {
   return result;
 });
 
+// Provider for history records with time range filtering
+final historyRecordsProvider = FutureProvider.family<List<RecordWithTags>, int>(
+  (ref, days) async {
+    final records = await ref.watch(recordsProvider.future);
+    if (records.isEmpty) return [];
+
+    // If days is 0, it means "All" or "Custom" (simplified to All for now)
+    // Otherwise filter by last N days
+    List<BloodPressureRecord> filteredRecords = records;
+
+    if (days > 0) {
+      final now = DateTime.now();
+      // Start from midnight of N days ago
+      final startDate = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: days - 1));
+      final startMs = startDate.millisecondsSinceEpoch;
+
+      filteredRecords = records
+          .where((r) => r.measureTimeMs >= startMs)
+          .toList();
+    }
+
+    final dbHelper = DatabaseHelper.instance;
+    List<RecordWithTags> result = [];
+
+    for (var record in filteredRecords) {
+      final tags = await dbHelper.getTagsForRecord(record.id!);
+      result.add(RecordWithTags(record: record, tags: tags));
+    }
+
+    return result;
+  },
+);
+
+// Provider for history chart data (daily averages for the selected range)
+final historyChartProvider =
+    FutureProvider.family<List<Map<String, dynamic>>, int>((ref, days) async {
+      final records = await ref.watch(recordsProvider.future);
+      if (records.isEmpty) return [];
+
+      // Determine range
+      final now = DateTime.now();
+      // Default to 7 days if 0 provided for chart to show something meaningful or handle all data
+      // Let's say if days=0 (custom), we show last 30 days for now
+      final rangeDays = days > 0 ? days : 30;
+
+      final List<Map<String, dynamic>> result = [];
+
+      // Loop through each day in the range
+      for (int i = rangeDays - 1; i >= 0; i--) {
+        final day = now.subtract(Duration(days: i));
+        final startOfDay = DateTime(
+          day.year,
+          day.month,
+          day.day,
+        ).millisecondsSinceEpoch;
+        final endOfDay = DateTime(
+          day.year,
+          day.month,
+          day.day,
+          23,
+          59,
+          59,
+        ).millisecondsSinceEpoch;
+
+        final dayRecords = records.where((r) {
+          return r.measureTimeMs >= startOfDay && r.measureTimeMs <= endOfDay;
+        }).toList();
+
+        double avgSys = 0;
+        double avgDia = 0;
+
+        if (dayRecords.isNotEmpty) {
+          final totalSys = dayRecords.fold(0, (sum, r) => sum + r.systolic);
+          final totalDia = dayRecords.fold(0, (sum, r) => sum + r.diastolic);
+          avgSys = totalSys / dayRecords.length;
+          avgDia = totalDia / dayRecords.length;
+        }
+
+        result.add({
+          'date': day,
+          'systolic': avgSys,
+          'diastolic': avgDia,
+          'hasData': dayRecords.isNotEmpty,
+        });
+      }
+
+      return result;
+    });
+
 // Provider for daily average
 final dailyAverageProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final records = await ref.watch(recordsProvider.future);
