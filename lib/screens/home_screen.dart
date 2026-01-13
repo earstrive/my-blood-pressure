@@ -1,13 +1,15 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_first_app/providers/record_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
@@ -24,7 +26,7 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-                    _buildSummaryCard(),
+                    _buildSummaryCard(ref),
                     const SizedBox(height: 32),
                     _buildWeeklyTrend(),
                     const SizedBox(height: 32),
@@ -86,7 +88,9 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryCard() {
+  Widget _buildSummaryCard(WidgetRef ref) {
+    final dailyDataAsync = ref.watch(dailyAverageProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
@@ -134,58 +138,119 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             // Content
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            dailyDataAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
+              error: (err, stack) => Center(
+                child: Text(
+                  'Error: $err',
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+              data: (data) {
+                final systolic = data['systolic'] as int;
+                final diastolic = data['diastolic'] as int;
+                final heartRate = data['heartRate'] as int;
+                final status = data['status'] as String;
+                final lastUpdated = data['lastUpdated'] as int?;
+                final hasData = data['count'] as int > 0;
+
+                return Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            '今日平均',
-                            style: GoogleFonts.notoSans(
-                              textStyle: TextStyle(
-                                color: Colors.blue[100],
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '今日平均',
+                                style: GoogleFonts.notoSans(
+                                  textStyle: TextStyle(
+                                    color: Colors.blue[100],
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: 4),
+                              hasData
+                                  ? RichText(
+                                      text: TextSpan(
+                                        children: [
+                                          TextSpan(
+                                            text: '$systolic',
+                                            style: GoogleFonts.notoSans(
+                                              textStyle: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 36,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: '/$diastolic',
+                                            style: GoogleFonts.notoSans(
+                                              textStyle: TextStyle(
+                                                color: Colors.blue[200],
+                                                fontSize: 24,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          TextSpan(
+                                            text: ' mmHg',
+                                            style: GoogleFonts.notoSans(
+                                              textStyle: TextStyle(
+                                                color: Colors.blue[100],
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : Text(
+                                      '--',
+                                      style: GoogleFonts.notoSans(
+                                        textStyle: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                            ],
                           ),
-                          const SizedBox(height: 4),
-                          RichText(
-                            text: TextSpan(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
                               children: [
-                                TextSpan(
-                                  text: '118',
+                                const Icon(
+                                  FontAwesomeIcons.heartPulse,
+                                  color: Colors.white,
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  hasData ? '$heartRate' : '--',
                                   style: GoogleFonts.notoSans(
                                     textStyle: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 36,
                                       fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: '/76',
-                                  style: GoogleFonts.notoSans(
-                                    textStyle: TextStyle(
-                                      color: Colors.blue[200],
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: ' mmHg',
-                                  style: GoogleFonts.notoSans(
-                                    textStyle: TextStyle(
-                                      color: Colors.blue[100],
                                       fontSize: 14,
                                     ),
                                   ),
@@ -195,84 +260,65 @@ class HomeScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              FontAwesomeIcons.heartPulse,
-                              color: Colors.white,
-                              size: 12,
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '72',
-                              style: GoogleFonts.notoSans(
-                                textStyle: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                            decoration: BoxDecoration(
+                              color: hasData && status == '正常'
+                                  ? Colors.green[400]
+                                  : (hasData
+                                        ? Colors.orange[400]
+                                        : Colors.grey[400]),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  hasData && status == '正常'
+                                      ? FontAwesomeIcons.solidCircleCheck
+                                      : FontAwesomeIcons.circleExclamation,
+                                  color: hasData && status == '正常'
+                                      ? const Color(0xFF14532D)
+                                      : Colors.white,
+                                  size: 12,
                                 ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green[400],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              FontAwesomeIcons.solidCircleCheck,
-                              color: Color(0xFF14532D),
-                              size: 12,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '正常',
-                              style: GoogleFonts.notoSans(
-                                textStyle: const TextStyle(
-                                  color: Color(0xFF14532D),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                const SizedBox(width: 4),
+                                Text(
+                                  status,
+                                  style: GoogleFonts.notoSans(
+                                    textStyle: TextStyle(
+                                      color: hasData && status == '正常'
+                                          ? const Color(0xFF14532D)
+                                          : Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '10分钟前更新',
-                        style: GoogleFonts.notoSans(
-                          textStyle: TextStyle(
-                            color: Colors.blue[100],
-                            fontSize: 12,
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          if (lastUpdated != null)
+                            Text(
+                              '${DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(lastUpdated)).inMinutes}分钟前更新',
+                              style: GoogleFonts.notoSans(
+                                textStyle: TextStyle(
+                                  color: Colors.blue[100],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
           ],
         ),
