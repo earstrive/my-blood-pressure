@@ -8,6 +8,13 @@ import 'package:my_first_app/screens/settings_screen.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
+  static void switchToHistory(BuildContext context) {
+    final state = context.findAncestorStateOfType<_DashboardScreenState>();
+    state?.setState(() {
+      state._selectedIndex = 1;
+    });
+  }
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }

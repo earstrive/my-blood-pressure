@@ -45,6 +45,28 @@ class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
       return;
     }
 
+    // Validation for realistic values
+    if (systolic < 50 || systolic > 300) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('收缩压数值异常 (50-300)，请检查输入')));
+      return;
+    }
+
+    if (diastolic < 30 || diastolic > 200) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('舒张压数值异常 (30-200)，请检查输入')));
+      return;
+    }
+
+    if (systolic <= diastolic) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('收缩压必须大于舒张压')));
+      return;
+    }
+
     final DateTime measureTime = DateTime(
       _selectedDate.year,
       _selectedDate.month,
@@ -108,9 +130,17 @@ class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
     _loadTags();
   }
 
-  Future<void> _loadTags() async {
+  Future<void> _loadTags({Set<int>? selectedIds}) async {
     final dbHelper = DatabaseHelper.instance;
     final tags = await dbHelper.getAllTags();
+
+    // Preserve selection
+    final idsToSelect =
+        selectedIds ??
+        _tags
+            .where((t) => t['selected'] as bool)
+            .map((t) => t['id'] as int)
+            .toSet();
 
     if (mounted) {
       setState(() {
@@ -138,12 +168,68 @@ class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
             'id': tag.id,
             'name': tag.name,
             'icon': icon,
-            'selected': false,
+            'selected': idsToSelect.contains(tag.id),
             'color': tag.color,
           };
         }).toList();
       });
     }
+  }
+
+  Future<void> _addNewTag() async {
+    final controller = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('新增标签'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: '输入标签名称'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                try {
+                  final dbHelper = DatabaseHelper.instance;
+                  final tag = Tag(
+                    name: name,
+                    createdAtMs: DateTime.now().millisecondsSinceEpoch,
+                    color: Colors.blue.value,
+                  );
+                  final id = await dbHelper.createTag(tag);
+
+                  if (mounted) {
+                    Navigator.pop(context);
+                    // Reload and select the new tag
+                    final currentSelected = _tags
+                        .where((t) => t['selected'] as bool)
+                        .map((t) => t['id'] as int)
+                        .toSet();
+                    currentSelected.add(id);
+                    _loadTags(selectedIds: currentSelected);
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('添加失败: 可能标签已存在')),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -578,23 +664,26 @@ class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
                 ),
               );
             }),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.grey[300]!,
-                  style: BorderStyle
-                      .solid, // Dashed border is tricky without custom painter, using solid for now or specialized package
+            GestureDetector(
+              onTap: _addNewTag,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.grey[300]!,
+                    style: BorderStyle
+                        .solid, // Dashed border is tricky without custom painter, using solid for now or specialized package
+                  ),
                 ),
-              ),
-              child: const Center(
-                child: Icon(
-                  FontAwesomeIcons.plus,
-                  size: 14,
-                  color: Colors.grey,
+                child: const Center(
+                  child: Icon(
+                    FontAwesomeIcons.plus,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
             ),

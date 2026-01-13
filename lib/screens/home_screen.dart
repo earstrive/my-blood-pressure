@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:my_first_app/providers/record_provider.dart';
+import 'package:my_first_app/screens/dashboard_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -29,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 8),
                     _buildSummaryCard(ref),
                     const SizedBox(height: 32),
-                    _buildWeeklyTrend(ref),
+                    _buildWeeklyTrend(context, ref),
                     const SizedBox(height: 32),
                     _buildRecentRecords(ref),
                   ],
@@ -325,7 +326,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeeklyTrend(WidgetRef ref) {
+  Widget _buildWeeklyTrend(BuildContext context, WidgetRef ref) {
     final weeklyTrendAsync = ref.watch(weeklyTrendProvider);
 
     return Padding(
@@ -346,7 +347,9 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
               TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  DashboardScreen.switchToHistory(context);
+                },
                 child: Text(
                   '查看全部',
                   style: GoogleFonts.notoSans(
