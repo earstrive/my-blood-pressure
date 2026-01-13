@@ -1,18 +1,18 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:my_first_app/providers/settings_provider.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isReminderEnabled = true;
-
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,7 +76,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               shape: BoxShape.circle,
               image: const DecorationImage(
                 image: NetworkImage(
-                    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
+                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                ),
                 fit: BoxFit.cover,
               ),
             ),
@@ -99,10 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 '编辑资料',
                 style: GoogleFonts.notoSans(
-                  textStyle: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  textStyle: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ),
             ],
@@ -133,6 +131,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildRemindersSection() {
+    final settings = ref.watch(settingsProvider);
+    final settingsNotifier = ref.read(settingsProvider.notifier);
+
     return Column(
       children: [
         _buildSectionTitle('通知提醒'),
@@ -160,12 +161,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconBgColor: Colors.blue[50]!,
                   title: '每日提醒',
                   trailing: CupertinoSwitch(
-                    value: _isReminderEnabled,
+                    value: settings.reminderEnabled,
                     activeColor: Colors.blue[500],
                     onChanged: (value) {
-                      setState(() {
-                        _isReminderEnabled = value;
-                      });
+                      settingsNotifier.setReminderEnabled(value);
                     },
                   ),
                   showBorder: true,
@@ -176,13 +175,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconBgColor: Colors.transparent,
                   title: '提醒时间',
                   trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '21:00',
+                      '${settings.reminderTime.hour.toString().padLeft(2, '0')}:${settings.reminderTime.minute.toString().padLeft(2, '0')}',
                       style: GoogleFonts.notoSans(
                         textStyle: TextStyle(
                           fontSize: 14,
@@ -193,6 +195,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   showBorder: false,
+                  onTap: () async {
+                    final TimeOfDay? picked = await showTimePicker(
+                      context: context,
+                      initialTime: settings.reminderTime,
+                    );
+                    if (picked != null && picked != settings.reminderTime) {
+                      settingsNotifier.setReminderTime(picked);
+                    }
+                  },
                 ),
               ],
             ),
@@ -229,7 +240,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconColor: Colors.green[500]!,
                   iconBgColor: Colors.green[50]!,
                   title: '导出 CSV',
-                  trailing: const Icon(FontAwesomeIcons.chevronRight, size: 14, color: Colors.grey),
+                  trailing: const Icon(
+                    FontAwesomeIcons.chevronRight,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
                   showBorder: true,
                   onTap: () {},
                 ),
@@ -238,7 +253,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconColor: Colors.purple[500]!,
                   iconBgColor: Colors.purple[50]!,
                   title: '数据备份',
-                  trailing: const Icon(FontAwesomeIcons.chevronRight, size: 14, color: Colors.grey),
+                  trailing: const Icon(
+                    FontAwesomeIcons.chevronRight,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
                   showBorder: false,
                   onTap: () {},
                 ),
@@ -276,7 +295,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   iconColor: Colors.orange[500]!,
                   iconBgColor: Colors.orange[50]!,
                   title: '去评分',
-                  trailing: const Icon(FontAwesomeIcons.chevronRight, size: 14, color: Colors.grey),
+                  trailing: const Icon(
+                    FontAwesomeIcons.chevronRight,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
                   showBorder: true,
                   onTap: () {},
                 ),
@@ -319,7 +342,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Adjusted padding to match HTML feel
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ), // Adjusted padding to match HTML feel
           child: Row(
             children: [
               Container(
@@ -329,9 +355,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: iconBgColor,
                   shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: Icon(icon, color: iconColor, size: 14),
-                ),
+                child: Center(child: Icon(icon, color: iconColor, size: 14)),
               ),
               const SizedBox(width: 12),
               Expanded(
