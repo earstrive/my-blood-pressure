@@ -10,9 +10,7 @@ class DashboardScreen extends StatefulWidget {
 
   static void switchToHistory(BuildContext context) {
     final state = context.findAncestorStateOfType<_DashboardScreenState>();
-    state?.setState(() {
-      state._selectedIndex = 1;
-    });
+    state?.switchToHistoryPage();
   }
 
   @override
@@ -21,6 +19,12 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+
+  void switchToHistoryPage() {
+    setState(() {
+      _selectedIndex = 1;
+    });
+  }
 
   final List<Widget> _pages = [
     const HomeScreen(),

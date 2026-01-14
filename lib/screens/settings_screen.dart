@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:my_first_app/providers/settings_provider.dart';
 import 'package:my_first_app/services/database_helper.dart';
+import 'package:my_first_app/services/notification_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -19,6 +20,35 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  Future<void> _testNotification() async {
+    try {
+      final ns = NotificationService();
+      await ns.showNotification(
+        id: 999,
+        title: '测试通知',
+        body: '这是一条测试通知，证明通知功能正常工作。',
+      );
+
+      final permInfo = await ns.getPermissionDebugInfo();
+
+      if (mounted) {
+        final debugInfo = ns.debugInfo;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('测试通知已发送\n$permInfo\n$debugInfo'),
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('发送失败: $e')));
+      }
+    }
+  }
+
   Future<void> _exportData() async {
     try {
       final records = await DatabaseHelper.instance.readAllRecords();
@@ -249,16 +279,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                   ),
-                  showBorder: false,
+                  showBorder: true,
                   onTap: () async {
                     final TimeOfDay? picked = await showTimePicker(
                       context: context,
                       initialTime: settings.reminderTime,
                     );
                     if (picked != null && picked != settings.reminderTime) {
-                      settingsNotifier.setReminderTime(picked);
+                      await settingsNotifier.setReminderTime(picked);
+                      if (context.mounted) {
+                        final debugInfo = NotificationService().debugInfo;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('提醒时间已更新\n$debugInfo'),
+                            duration: const Duration(seconds: 5),
+                          ),
+                        );
+                      }
                     }
                   },
+                ),
+                _buildListItem(
+                  icon: FontAwesomeIcons.bell,
+                  iconColor: Colors.blue[500]!,
+                  iconBgColor: Colors.transparent,
+                  title: '测试通知',
+                  trailing: const Icon(
+                    FontAwesomeIcons.chevronRight,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  showBorder: false,
+                  onTap: _testNotification,
                 ),
               ],
             ),

@@ -74,7 +74,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   Future<void> setReminderTime(TimeOfDay time) async {
     state = state.copyWith(reminderTime: time);
     await _saveSetting('reminder_time', '${time.hour}:${time.minute}');
-    _updateNotification();
+    await _updateNotification();
   }
 
   Future<void> _saveSetting(String key, String value) async {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:my_first_app/screens/dashboard_screen.dart';
+import 'package:my_first_app/services/database_helper.dart';
 import 'package:my_first_app/services/notification_service.dart';
 
 void main() async {
@@ -32,13 +33,24 @@ class _MyAppState extends State<MyApp> {
       await notificationService.init();
       await notificationService.requestPermissions();
 
-      // Schedule daily reminder at 21:00
-      await notificationService.scheduleDailyReminder(
-        id: 1,
-        title: '记得测量血压',
-        body: '晚上好！现在是测量血压的最佳时间。',
-        time: const TimeOfDay(hour: 21, minute: 0),
+      // Check if user has set a custom time
+      final dbHelper = DatabaseHelper.instance;
+      final db = await dbHelper.database;
+      final timeResult = await db.query(
+        'app_kv',
+        where: 'key = ?',
+        whereArgs: ['reminder_time'],
       );
+
+      // Only schedule default if no setting exists
+      if (timeResult.isEmpty) {
+        await notificationService.scheduleDailyReminder(
+          id: 1,
+          title: '记得测量血压',
+          body: '晚上好！现在是测量血压的最佳时间。',
+          time: const TimeOfDay(hour: 21, minute: 0),
+        );
+      }
     } catch (e) {
       debugPrint('Initialization failed: $e');
     }
