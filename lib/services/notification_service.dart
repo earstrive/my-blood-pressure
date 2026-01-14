@@ -28,7 +28,9 @@ class NotificationService {
         // Handle notification tap
       },
     );
+  }
 
+  Future<void> requestPermissions() async {
     // Request permissions for Android 13+
     if (Platform.isAndroid) {
       final androidPlugin = flutterLocalNotificationsPlugin
