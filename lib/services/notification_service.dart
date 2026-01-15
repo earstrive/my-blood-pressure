@@ -68,7 +68,7 @@ class NotificationService {
     }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
@@ -94,6 +94,7 @@ class NotificationService {
           channelDescription: '提醒您测量血压',
           importance: Importance.max,
           priority: Priority.high,
+          icon: '@mipmap/launcher_icon',
         );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
@@ -167,6 +168,7 @@ class NotificationService {
               channelDescription: '提醒您测量血压',
               importance: Importance.max,
               priority: Priority.high,
+              icon: '@mipmap/launcher_icon',
             ),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -225,6 +227,7 @@ class NotificationService {
             channelDescription: '提醒您测量血压',
             importance: Importance.max,
             priority: Priority.high,
+            icon: '@mipmap/launcher_icon',
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
