@@ -59,7 +59,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '血压记录',
+      title: '我的血压',
       debugShowCheckedModeBanner: false,
       locale: const Locale('zh', 'CN'),
       theme: ThemeData(

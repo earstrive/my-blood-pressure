@@ -147,7 +147,6 @@ class NotificationService {
         await cancelNotification(id + i);
       }
 
-      final now = tz.TZDateTime.now(tz.local);
       tz.TZDateTime scheduledDate = _nextInstanceOfTime(time);
 
       _debugLog += 'SchedBase: $scheduledDate; ';
