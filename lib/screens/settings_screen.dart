@@ -12,6 +12,8 @@ import 'package:my_first_app/services/notification_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:my_first_app/screens/tag_management_screen.dart';
+
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -342,6 +344,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             child: Column(
               children: [
+                _buildListItem(
+                  icon: FontAwesomeIcons.tags,
+                  iconColor: Colors.blue[500]!,
+                  iconBgColor: Colors.blue[50]!,
+                  title: '标签管理',
+                  trailing: const Icon(
+                    FontAwesomeIcons.chevronRight,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  showBorder: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TagManagementScreen(),
+                      ),
+                    );
+                  },
+                ),
                 _buildListItem(
                   icon: FontAwesomeIcons.fileExport,
                   iconColor: Colors.green[500]!,

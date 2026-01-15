@@ -163,6 +163,25 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.insert('tag', tag.toMap());
   }
+
+  Future<int> updateTag(Tag tag) async {
+    final db = await instance.database;
+    return await db.update(
+      'tag',
+      tag.toMap(),
+      where: 'id = ?',
+      whereArgs: [tag.id],
+    );
+  }
+
+  Future<int> deleteTag(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'tag',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
   
   // --- Record-Tag Operations ---
   

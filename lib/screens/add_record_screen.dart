@@ -176,62 +176,6 @@ class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
     }
   }
 
-  Future<void> _addNewTag() async {
-    final controller = TextEditingController();
-
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('新增标签'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: '输入标签名称'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final name = controller.text.trim();
-              if (name.isNotEmpty) {
-                try {
-                  final dbHelper = DatabaseHelper.instance;
-                  final tag = Tag(
-                    name: name,
-                    createdAtMs: DateTime.now().millisecondsSinceEpoch,
-                    color: Colors.blue.value,
-                  );
-                  final id = await dbHelper.createTag(tag);
-
-                  if (mounted) {
-                    Navigator.pop(context);
-                    // Reload and select the new tag
-                    final currentSelected = _tags
-                        .where((t) => t['selected'] as bool)
-                        .map((t) => t['id'] as int)
-                        .toSet();
-                    currentSelected.add(id);
-                    _loadTags(selectedIds: currentSelected);
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('添加失败: 可能标签已存在')),
-                    );
-                  }
-                }
-              }
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   void dispose() {
     _systolicController.dispose();
@@ -600,96 +544,80 @@ class _AddRecordScreenState extends ConsumerState<AddRecordScreen> {
   }
 
   Widget _buildTagsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '标签',
-          style: GoogleFonts.notoSans(
-            textStyle: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ..._tags.map((tag) {
-              final isSelected = tag['selected'] as bool;
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    tag['selected'] = !isSelected;
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.blue[50] : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isSelected ? Colors.blue[200]! : Colors.grey[200]!,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        tag['icon'] as IconData,
-                        size: 14,
-                        color: isSelected ? Colors.blue[600] : Colors.grey[500],
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        tag['name'] as String,
-                        style: GoogleFonts.notoSans(
-                          textStyle: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: isSelected
-                                ? Colors.blue[600]
-                                : Colors.grey[500],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            GestureDetector(
-              onTap: _addNewTag,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.grey[300]!,
-                    style: BorderStyle
-                        .solid, // Dashed border is tricky without custom painter, using solid for now or specialized package
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(
-                    FontAwesomeIcons.plus,
-                    size: 14,
-                    color: Colors.grey,
-                  ),
-                ),
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '标签',
+            style: GoogleFonts.notoSans(
+              textStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
               ),
             ),
-          ],
-        ),
-      ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ..._tags.map((tag) {
+                final isSelected = tag['selected'] as bool;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      tag['selected'] = !isSelected;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.blue[50] : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.blue[200]!
+                            : Colors.grey[200]!,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          tag['icon'] as IconData,
+                          size: 14,
+                          color: isSelected
+                              ? Colors.blue[600]
+                              : Colors.grey[500],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          tag['name'] as String,
+                          style: GoogleFonts.notoSans(
+                            textStyle: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.blue[600]
+                                  : Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
