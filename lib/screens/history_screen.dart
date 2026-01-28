@@ -296,12 +296,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                 fontSize: 10,
                               );
 
-                              if (value < 0 || value >= data.length)
+                              if (value < 0 || value >= data.length) {
                                 return const SizedBox();
+                              }
 
                               // Show label sparsely if many points
-                              if (data.length > 7 && value.toInt() % 5 != 0)
+                              if (data.length > 7 && value.toInt() % 5 != 0) {
                                 return const SizedBox();
+                              }
 
                               final date =
                                   data[value.toInt()]['date'] as DateTime;
@@ -433,12 +435,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       date.year == yesterday.year;
 
                   String label = dateStr;
-                  if (isToday)
+                  if (isToday) {
                     label = '今天';
-                  else if (isYesterday)
+                  } else if (isYesterday) {
                     label = '昨天';
-                  else
+                  } else {
                     label = DateFormat('MM月dd日').format(date);
+                  }
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),

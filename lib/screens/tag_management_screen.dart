@@ -144,14 +144,14 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                         final updatedTag = Tag(
                           id: tag.id,
                           name: name,
-                          color: selectedColor.value,
+                          color: selectedColor.toARGB32(),
                           createdAtMs: tag.createdAtMs,
                         );
                         await DatabaseHelper.instance.updateTag(updatedTag);
                       } else {
                         final newTag = Tag(
                           name: name,
-                          color: selectedColor.value,
+                          color: selectedColor.toARGB32(),
                           createdAtMs: DateTime.now().millisecondsSinceEpoch,
                         );
                         await DatabaseHelper.instance.createTag(newTag);

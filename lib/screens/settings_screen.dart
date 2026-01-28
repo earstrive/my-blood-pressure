@@ -92,7 +92,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final file = File(path);
       await file.writeAsString(csv);
 
-      await Share.shareXFiles([XFile(path)], text: '我的血压记录');
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(path)], text: '我的血压记录'),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -249,7 +251,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: '每日提醒',
                   trailing: CupertinoSwitch(
                     value: settings.reminderEnabled,
-                    activeColor: Colors.blue[500],
+                    activeTrackColor: Colors.blue[500],
                     onChanged: (value) {
                       settingsNotifier.setReminderEnabled(value);
                     },
@@ -289,15 +291,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     );
                     if (picked != null && picked != settings.reminderTime) {
                       await settingsNotifier.setReminderTime(picked);
-                      if (context.mounted) {
-                        final debugInfo = NotificationService().debugInfo;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('提醒时间已更新\n$debugInfo'),
-                            duration: const Duration(seconds: 5),
-                          ),
-                        );
+                      if (!mounted) {
+                        return;
                       }
+                      final debugInfo = NotificationService().debugInfo;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('提醒时间已更新\n$debugInfo'),
+                          duration: const Duration(seconds: 5),
+                        ),
+                      );
                     }
                   },
                 ),

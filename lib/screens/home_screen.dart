@@ -10,6 +10,19 @@ import 'package:my_first_app/screens/dashboard_screen.dart';
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
+  String _formatLastUpdated(int lastUpdated) {
+    final now = DateTime.now();
+    final updatedAt = DateTime.fromMillisecondsSinceEpoch(lastUpdated);
+    final diff = now.difference(updatedAt);
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes}分钟前更新';
+    }
+    if (diff.inHours < 24) {
+      return '${diff.inHours}小时前更新';
+    }
+    return '${diff.inDays}天前更新';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
@@ -305,7 +318,7 @@ class HomeScreen extends ConsumerWidget {
                           const SizedBox(width: 8),
                           if (lastUpdated != null)
                             Text(
-                              '${DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(lastUpdated)).inMinutes}分钟前更新',
+                              _formatLastUpdated(lastUpdated),
                               style: GoogleFonts.notoSans(
                                 textStyle: TextStyle(
                                   color: Colors.blue[100],
@@ -411,8 +424,9 @@ class HomeScreen extends ConsumerWidget {
                             // Let's check provider logic.
                             // Provider loop: for (int i = 6; i >= 0; i--) -> 6 days ago ... today.
                             // So index 0 is 6 days ago.
-                            if (value < 0 || value >= data.length)
+                            if (value < 0 || value >= data.length) {
                               return const SizedBox();
+                            }
 
                             final dayData = data[value.toInt()];
                             final weekday = dayData['weekday'] as int;
