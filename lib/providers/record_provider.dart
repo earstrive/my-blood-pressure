@@ -19,12 +19,31 @@ final recentRecordsProvider = FutureProvider<List<RecordWithTags>>((ref) async {
   final records = await ref.watch(recordsProvider.future);
   if (records.isEmpty) return [];
 
-  // Take top 2
-  final recent = records.take(2).toList();
   final dbHelper = DatabaseHelper.instance;
+  final Map<String, List<BloodPressureRecord>> grouped = {};
+
+  for (var record in records) {
+    final date = DateTime.fromMillisecondsSinceEpoch(record.measureTimeMs);
+    final key =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    grouped.putIfAbsent(key, () => []);
+    grouped[key]!.add(record);
+  }
+
+  if (grouped.isEmpty) return [];
+
+  final dayLists = grouped.values.toList();
+  final List<BloodPressureRecord> selected = [];
+
+  for (final dayRecords in dayLists) {
+    selected.addAll(dayRecords);
+    if (selected.length >= 4) {
+      break;
+    }
+  }
 
   List<RecordWithTags> result = [];
-  for (var record in recent) {
+  for (var record in selected) {
     final tags = await dbHelper.getTagsForRecord(record.id!);
     result.add(RecordWithTags(record: record, tags: tags));
   }

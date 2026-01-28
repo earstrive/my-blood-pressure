@@ -708,7 +708,7 @@ class HomeScreen extends ConsumerWidget {
                       time: displayTime,
                       pulse: r.heartRate ?? 0,
                       isDay: isDay,
-                      tag: item.tags.isNotEmpty ? item.tags.first.name : null,
+                      tags: item.tags.map((t) => t.name).toList(),
                     ),
                   );
                 }).toList(),
@@ -726,7 +726,7 @@ class HomeScreen extends ConsumerWidget {
     required String time,
     required int pulse,
     required bool isDay,
-    String? tag,
+    List<String> tags = const [],
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -810,21 +810,31 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              if (tag != null) ...[
+              if (tags.isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    tag,
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
-                  ),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  alignment: WrapAlignment.end,
+                  children: tags.map((tag) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        tag,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ],
             ],
