@@ -23,6 +23,77 @@ class HomeScreen extends ConsumerWidget {
     return '${diff.inDays}天前更新';
   }
 
+  String _weekdayLabel(int weekday) {
+    switch (weekday) {
+      case 1:
+        return '周一';
+      case 2:
+        return '周二';
+      case 3:
+        return '周三';
+      case 4:
+        return '周四';
+      case 5:
+        return '周五';
+      case 6:
+        return '周六';
+      case 7:
+        return '周日';
+      default:
+        return '';
+    }
+  }
+
+  Widget _buildTrendStat(String label, String value) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.notoSans(
+              textStyle: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.notoSans(
+              textStyle: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String text) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: GoogleFonts.notoSans(
+            textStyle: const TextStyle(fontSize: 10, color: Colors.grey),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
@@ -378,7 +449,7 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Container(
-            height: 180,
+            height: 220,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -396,100 +467,155 @@ class HomeScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Error: $err')),
               data: (data) {
-                // Check if all data is empty
                 final allEmpty = data.every((d) => d['hasData'] == false);
                 if (allEmpty) {
                   return const Center(child: Text('近7天暂无数据'));
                 }
 
-                return BarChart(
-                  BarChartData(
-                    alignment: BarChartAlignment.spaceAround,
-                    maxY: 160,
-                    barTouchData: BarTouchData(enabled: false),
-                    titlesData: FlTitlesData(
-                      show: true,
-                      bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                          showTitles: true,
-                          getTitlesWidget: (double value, TitleMeta meta) {
-                            const style = TextStyle(
-                              color: Colors.grey,
-                              fontSize: 10,
+                final validData = data
+                    .where((d) => d['hasData'] == true)
+                    .toList();
+                final count = validData.length;
+                double sumSys = 0;
+                double sumDia = 0;
+                double maxSys = 0;
+                double maxDia = 0;
+                double minSys = 999;
+                double minDia = 999;
+                double maxValue = 0;
+
+                for (final item in validData) {
+                  final sys = item['systolic'] as double;
+                  final dia = item['diastolic'] as double;
+                  sumSys += sys;
+                  sumDia += dia;
+                  if (sys > maxSys) maxSys = sys;
+                  if (dia > maxDia) maxDia = dia;
+                  if (sys < minSys) minSys = sys;
+                  if (dia < minDia) minDia = dia;
+                  if (sys > maxValue) maxValue = sys;
+                  if (dia > maxValue) maxValue = dia;
+                }
+
+                final avgSys = count > 0 ? (sumSys / count).round() : 0;
+                final avgDia = count > 0 ? (sumDia / count).round() : 0;
+                final maxY = maxValue < 160 ? 160.0 : maxValue + 10.0;
+                final rangeText = count > 0
+                    ? '${minSys.round()}-${maxSys.round()} / ${minDia.round()}-${maxDia.round()}'
+                    : '--';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        _buildTrendStat('平均', '$avgSys/$avgDia'),
+                        _buildTrendStat('范围', rangeText),
+                        _buildTrendStat('记录', '$count天'),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildLegendItem(Colors.blue[500]!, '收缩压'),
+                        const SizedBox(width: 12),
+                        _buildLegendItem(Colors.indigo[200]!, '舒张压'),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: BarChart(
+                        BarChartData(
+                          alignment: BarChartAlignment.spaceAround,
+                          maxY: maxY,
+                          barTouchData: BarTouchData(
+                            enabled: true,
+                            touchTooltipData: BarTouchTooltipData(
+                              tooltipBgColor: Colors.black87,
+                              getTooltipItem:
+                                  (group, groupIndex, rod, rodIndex) {
+                                    final item = data[groupIndex];
+                                    final hasData =
+                                        item['hasData'] as bool? ?? false;
+                                    if (!hasData) {
+                                      return null;
+                                    }
+                                    final weekday = _weekdayLabel(
+                                      item['weekday'] as int,
+                                    );
+                                    final label = rodIndex == 0 ? '收缩压' : '舒张压';
+                                    final value = rodIndex == 0
+                                        ? (item['systolic'] as double).round()
+                                        : (item['diastolic'] as double).round();
+                                    return BarTooltipItem(
+                                      '$weekday\n$label $value',
+                                      const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    );
+                                  },
+                            ),
+                          ),
+                          titlesData: FlTitlesData(
+                            show: true,
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: true,
+                                getTitlesWidget:
+                                    (double value, TitleMeta meta) {
+                                      const style = TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 10,
+                                      );
+
+                                      if (value < 0 || value >= data.length) {
+                                        return const SizedBox();
+                                      }
+
+                                      final dayData = data[value.toInt()];
+                                      final weekday = dayData['weekday'] as int;
+                                      final text = _weekdayLabel(weekday);
+                                      return SideTitleWidget(
+                                        axisSide: meta.axisSide,
+                                        space: 4,
+                                        child: Text(text, style: style),
+                                      );
+                                    },
+                              ),
+                            ),
+                            leftTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            rightTitles: const AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                          ),
+                          gridData: const FlGridData(show: false),
+                          borderData: FlBorderData(show: false),
+                          barGroups: data.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final item = entry.value;
+                            final sys = item['systolic'] as double;
+                            final dia = item['diastolic'] as double;
+                            final hasData = item['hasData'] as bool;
+
+                            return _makeBarGroup(
+                              index,
+                              hasData ? sys : 0.0,
+                              hasData ? dia : 0.0,
+                              hasData,
+                              maxY,
                             );
-
-                            // Map index to weekday string
-                            // data is reversed (last 7 days), index 0 is 6 days ago, index 6 is today
-                            // But our provider returns data from 6 days ago to today in order?
-                            // Let's check provider logic.
-                            // Provider loop: for (int i = 6; i >= 0; i--) -> 6 days ago ... today.
-                            // So index 0 is 6 days ago.
-                            if (value < 0 || value >= data.length) {
-                              return const SizedBox();
-                            }
-
-                            final dayData = data[value.toInt()];
-                            final weekday = dayData['weekday'] as int;
-
-                            String text;
-                            switch (weekday) {
-                              case 1:
-                                text = '周一';
-                                break;
-                              case 2:
-                                text = '周二';
-                                break;
-                              case 3:
-                                text = '周三';
-                                break;
-                              case 4:
-                                text = '周四';
-                                break;
-                              case 5:
-                                text = '周五';
-                                break;
-                              case 6:
-                                text = '周六';
-                                break;
-                              case 7:
-                                text = '周日';
-                                break;
-                              default:
-                                text = '';
-                            }
-                            return SideTitleWidget(
-                              axisSide: meta.axisSide,
-                              space: 4,
-                              child: Text(text, style: style),
-                            );
-                          },
+                          }).toList(),
                         ),
                       ),
-                      leftTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      topTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
-                      rightTitles: const AxisTitles(
-                        sideTitles: SideTitles(showTitles: false),
-                      ),
                     ),
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(show: false),
-                    barGroups: data.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      final sys = item['systolic'] as double;
-                      final hasData = item['hasData'] as bool;
-
-                      return _makeBarGroup(
-                        index,
-                        hasData ? sys : 0,
-                        0, // Not using diastolic for bar height yet, or maybe stacked? keeping simple for now
-                      );
-                    }).toList(),
-                  ),
+                  ],
                 );
               },
             ),
@@ -499,20 +625,33 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  BarChartGroupData _makeBarGroup(int x, double sys, double dia) {
+  BarChartGroupData _makeBarGroup(
+    int x,
+    double sys,
+    double dia,
+    bool hasData,
+    double maxY,
+  ) {
     return BarChartGroupData(
       x: x,
+      barsSpace: 4,
       barRods: [
         BarChartRodData(
           toY: sys,
-          color: Colors.blue[500],
-          width: 12,
+          color: hasData ? Colors.blue[500] : Colors.grey[300],
+          width: 8,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
           backDrawRodData: BackgroundBarChartRodData(
             show: true,
-            toY: 160, // Max scale
+            toY: maxY,
             color: Colors.blue[50],
           ),
+        ),
+        BarChartRodData(
+          toY: dia,
+          color: hasData ? Colors.indigo[200] : Colors.grey[200],
+          width: 8,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
         ),
       ],
     );
