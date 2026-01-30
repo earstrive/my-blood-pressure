@@ -90,11 +90,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         'Diastolic (mmHg)',
         'Heart Rate (bpm)',
         'Note',
+        'Tags',
         'Created At',
       ]);
 
       for (var record in records) {
         final date = DateTime.fromMillisecondsSinceEpoch(record.measureTimeMs);
+        final tags = await DatabaseHelper.instance.getTagsForRecord(record.id!);
+        final tagNames = tags.map((t) => t.name).join(',');
         rows.add([
           record.id,
           DateFormat('yyyy-MM-dd').format(date),
@@ -103,6 +106,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           record.diastolic,
           record.heartRate ?? '',
           record.note ?? '',
+          tagNames,
           DateTime.fromMillisecondsSinceEpoch(
             record.createdAtMs,
           ).toIso8601String(),
@@ -574,29 +578,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       if (!mounted) {
                         return;
                       }
-                      final debugInfo = NotificationService().debugInfo;
+                      final hh = picked.hour.toString().padLeft(2, '0');
+                      final mm = picked.minute.toString().padLeft(2, '0');
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('提醒时间已更新\n$debugInfo'),
-                          duration: const Duration(seconds: 5),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: Colors.blue[600],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          content: Row(
+                            children: [
+                              const Icon(
+                                FontAwesomeIcons.bell,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '提醒时间已更新为 $hh:$mm',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 3),
                         ),
                       );
                     }
                   },
                 ),
-                _buildListItem(
-                  icon: FontAwesomeIcons.bell,
-                  iconColor: Colors.blue[500]!,
-                  iconBgColor: Colors.transparent,
-                  title: '测试通知',
-                  trailing: const Icon(
-                    FontAwesomeIcons.chevronRight,
-                    size: 14,
-                    color: Colors.grey,
+                if (false)
+                  _buildListItem(
+                    icon: FontAwesomeIcons.bell,
+                    iconColor: Colors.blue[500]!,
+                    iconBgColor: Colors.transparent,
+                    title: '测试通知',
+                    trailing: const Icon(
+                      FontAwesomeIcons.chevronRight,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
+                    showBorder: false,
+                    onTap: _testNotification,
                   ),
-                  showBorder: false,
-                  onTap: _testNotification,
-                ),
               ],
             ),
           ),
@@ -660,19 +691,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   showBorder: true,
                   onTap: _exportData,
                 ),
-                _buildListItem(
-                  icon: FontAwesomeIcons.cloudArrowUp,
-                  iconColor: Colors.purple[500]!,
-                  iconBgColor: Colors.purple[50]!,
-                  title: '数据备份',
-                  trailing: const Icon(
-                    FontAwesomeIcons.chevronRight,
-                    size: 14,
-                    color: Colors.grey,
+                if (false)
+                  _buildListItem(
+                    icon: FontAwesomeIcons.cloudArrowUp,
+                    iconColor: Colors.purple[500]!,
+                    iconBgColor: Colors.purple[50]!,
+                    title: '数据备份',
+                    trailing: const Icon(
+                      FontAwesomeIcons.chevronRight,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
+                    showBorder: false,
+                    onTap: () {},
                   ),
-                  showBorder: false,
-                  onTap: () {},
-                ),
               ],
             ),
           ),
@@ -702,19 +734,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             child: Column(
               children: [
-                _buildListItem(
-                  icon: FontAwesomeIcons.star,
-                  iconColor: Colors.orange[500]!,
-                  iconBgColor: Colors.orange[50]!,
-                  title: '去评分',
-                  trailing: const Icon(
-                    FontAwesomeIcons.chevronRight,
-                    size: 14,
-                    color: Colors.grey,
+                if (false)
+                  _buildListItem(
+                    icon: FontAwesomeIcons.star,
+                    iconColor: Colors.orange[500]!,
+                    iconBgColor: Colors.orange[50]!,
+                    title: '去评分',
+                    trailing: const Icon(
+                      FontAwesomeIcons.chevronRight,
+                      size: 14,
+                      color: Colors.grey,
+                    ),
+                    showBorder: true,
+                    onTap: () {},
                   ),
-                  showBorder: true,
-                  onTap: () {},
-                ),
                 _buildListItem(
                   icon: FontAwesomeIcons.circleInfo,
                   iconColor: Colors.grey[500]!,
