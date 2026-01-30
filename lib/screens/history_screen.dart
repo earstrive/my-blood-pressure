@@ -495,6 +495,27 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           ),
                         ),
                       ),
+                      lineTouchData: LineTouchData(
+                        enabled: true,
+                        touchTooltipData: LineTouchTooltipData(
+                          tooltipBgColor: Colors.black87,
+                          getTooltipItems: (spots) {
+                            return spots.map((touchedSpot) {
+                              final label = touchedSpot.barIndex == 0
+                                  ? '收缩压'
+                                  : '舒张压';
+                              final value = touchedSpot.y.toStringAsFixed(1);
+                              return LineTooltipItem(
+                                '$label $value',
+                                const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                      ),
                       borderData: FlBorderData(show: false),
                       minX: 0,
                       maxX: (data.length - 1).toDouble(),
@@ -624,9 +645,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           ),
                           pulse: r.heartRate ?? 0,
                           statusColor: statusColor,
-                          tag: item.tags.isNotEmpty
-                              ? item.tags.first.name
-                              : null,
+                          tags: item.tags.map((t) => t.name).toList(),
                           showBorder: idx < items.length - 1,
                         );
                       }).toList(),
@@ -694,7 +713,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     required String time,
     required int pulse,
     required Color statusColor,
-    String? tag,
+    List<String> tags = const [],
     required bool showBorder,
   }) {
     return Container(
@@ -721,7 +740,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 ),
               ),
               const SizedBox(height: 4),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     time,
@@ -732,9 +754,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       ),
                     ),
                   ),
-                  if (tag != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
+                  ...tags.map((tag) {
+                    return Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
                         vertical: 2,
@@ -751,8 +772,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           color: Colors.blue[600],
                         ),
                       ),
-                    ),
-                  ],
+                    );
+                  }),
                 ],
               ),
             ],

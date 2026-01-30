@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:my_first_app/providers/settings_provider.dart';
 import 'package:my_first_app/services/database_helper.dart';
 import 'package:my_first_app/services/notification_service.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -22,6 +24,29 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final List<_AvatarOption> _avatarOptions = const [
+    _AvatarOption(
+      key: 'default',
+      icon: FontAwesomeIcons.user,
+      color: Color(0xFF90A4AE),
+    ),
+    _AvatarOption(
+      key: 'heart',
+      icon: FontAwesomeIcons.heartPulse,
+      color: Color(0xFFE57373),
+    ),
+    _AvatarOption(
+      key: 'stethoscope',
+      icon: FontAwesomeIcons.stethoscope,
+      color: Color(0xFF64B5F6),
+    ),
+    _AvatarOption(
+      key: 'leaf',
+      icon: FontAwesomeIcons.leaf,
+      color: Color(0xFF81C784),
+    ),
+  ];
+
   Future<void> _testNotification() async {
     try {
       final ns = NotificationService();
@@ -155,48 +180,303 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildProfileSection() {
+    final settings = ref.watch(settingsProvider);
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              shape: BoxShape.circle,
-              image: const DecorationImage(
-                image: AssetImage('assets/images/avatar.jpg'),
-                fit: BoxFit.cover,
-              ),
+      child: InkWell(
+        onTap: _showEditProfileDialog,
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            _buildProfileAvatar(settings.profileAvatar),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  settings.profileName,
+                  style: GoogleFonts.notoSans(
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '编辑资料',
+                  style: GoogleFonts.notoSans(
+                    textStyle: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatar(String avatarKey) {
+    final settings = ref.read(settingsProvider);
+    final customPath = settings.profileAvatarPath;
+    if (avatarKey == 'custom' &&
+        customPath != null &&
+        customPath.isNotEmpty &&
+        File(customPath).existsSync()) {
+      return Container(
+        width: 64,
+        height: 64,
+        decoration: const BoxDecoration(shape: BoxShape.circle),
+        child: ClipOval(child: Image.file(File(customPath), fit: BoxFit.cover)),
+      );
+    }
+
+    if (avatarKey == SettingsNotifier.defaultProfileAvatar) {
+      return Container(
+        width: 64,
+        height: 64,
+        decoration: const BoxDecoration(
+          color: Colors.grey,
+          shape: BoxShape.circle,
+          image: DecorationImage(
+            image: AssetImage('assets/images/avatar.jpg'),
+            fit: BoxFit.cover,
           ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '耳朵Strive',
+        ),
+      );
+    }
+
+    final option = _avatarOptions.firstWhere(
+      (o) => o.key == avatarKey,
+      orElse: () => _avatarOptions.first,
+    );
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: option.color.withValues(alpha: 0.2),
+        shape: BoxShape.circle,
+      ),
+      child: Center(child: Icon(option.icon, color: option.color, size: 24)),
+    );
+  }
+
+  Future<void> _showEditProfileDialog() async {
+    final settings = ref.read(settingsProvider);
+    final notifier = ref.read(settingsProvider.notifier);
+    final nameController = TextEditingController(text: settings.profileName);
+    String selectedAvatar = settings.profileAvatar;
+    String? customAvatarPath = settings.profileAvatarPath;
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(
+                '编辑资料',
                 style: GoogleFonts.notoSans(
                   textStyle: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '编辑资料',
-                style: GoogleFonts.notoSans(
-                  textStyle: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '昵称',
+                    style: GoogleFonts.notoSans(
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '头像',
+                    style: GoogleFonts.notoSans(
+                      textStyle: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          final pickedPath = await _pickAvatarImage();
+                          if (pickedPath == null) {
+                            return;
+                          }
+                          setState(() {
+                            customAvatarPath = pickedPath;
+                            selectedAvatar = 'custom';
+                          });
+                        },
+                        icon: const Icon(FontAwesomeIcons.image, size: 14),
+                        label: const Text('上传图片'),
+                      ),
+                      const SizedBox(width: 8),
+                      if (customAvatarPath != null &&
+                          customAvatarPath!.isNotEmpty &&
+                          File(customAvatarPath!).existsSync())
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.blue[500]!,
+                              width: 2,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: Image.file(
+                              File(customAvatarPath!),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: _avatarOptions.map((option) {
+                      final isSelected = selectedAvatar == option.key;
+                      final isDefault =
+                          option.key == SettingsNotifier.defaultProfileAvatar;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            selectedAvatar = option.key;
+                          });
+                        },
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: isDefault
+                                ? Colors.grey[200]
+                                : option.color.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? Colors.blue[500]!
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: isDefault
+                                ? ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/avatar.jpg',
+                                      width: 44,
+                                      height: 44,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  )
+                                : Icon(
+                                    option.icon,
+                                    color: option.color,
+                                    size: 20,
+                                  ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
-      ),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    await notifier.resetProfile();
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('恢复默认'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('取消'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final name = nameController.text.trim();
+                    final nextName = name.isEmpty
+                        ? SettingsNotifier.defaultProfileName
+                        : name;
+                    await notifier.setProfileName(nextName);
+                    if (selectedAvatar == 'custom' &&
+                        customAvatarPath != null &&
+                        customAvatarPath!.isNotEmpty) {
+                      await notifier.setProfileAvatar('custom');
+                      await notifier.setProfileAvatarPath(customAvatarPath);
+                    } else {
+                      await notifier.setProfileAvatar(selectedAvatar);
+                      await notifier.setProfileAvatarPath(null);
+                    }
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
+  }
+
+  Future<String?> _pickAvatarImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 512,
+      maxHeight: 512,
+    );
+    if (picked == null) {
+      return null;
+    }
+    final directory = await getApplicationDocumentsDirectory();
+    final extension = p.extension(picked.path);
+    final fileName =
+        'profile_avatar_${DateTime.now().millisecondsSinceEpoch}$extension';
+    final targetPath = p.join(directory.path, fileName);
+    final savedFile = await File(picked.path).copy(targetPath);
+    return savedFile.path;
   }
 
   Widget _buildSectionTitle(String title) {
@@ -509,4 +789,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+}
+
+class _AvatarOption {
+  final String key;
+  final IconData icon;
+  final Color color;
+
+  const _AvatarOption({
+    required this.key,
+    required this.icon,
+    required this.color,
+  });
 }

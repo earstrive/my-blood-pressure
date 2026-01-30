@@ -510,7 +510,9 @@ class HomeScreen extends ConsumerWidget {
                     Row(
                       children: [
                         _buildTrendStat('平均', '$avgSys/$avgDia'),
+                        const SizedBox(width: 12),
                         _buildTrendStat('范围', rangeText),
+                        const SizedBox(width: 12),
                         _buildTrendStat('记录', '$count天'),
                       ],
                     ),

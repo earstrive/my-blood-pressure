@@ -7,23 +7,47 @@ import 'package:my_first_app/services/notification_service.dart';
 class SettingsState {
   final bool reminderEnabled;
   final TimeOfDay reminderTime;
+  final String profileName;
+  final String profileAvatar;
+  final String? profileAvatarPath;
 
-  SettingsState({required this.reminderEnabled, required this.reminderTime});
+  SettingsState({
+    required this.reminderEnabled,
+    required this.reminderTime,
+    required this.profileName,
+    required this.profileAvatar,
+    required this.profileAvatarPath,
+  });
 
-  SettingsState copyWith({bool? reminderEnabled, TimeOfDay? reminderTime}) {
+  SettingsState copyWith({
+    bool? reminderEnabled,
+    TimeOfDay? reminderTime,
+    String? profileName,
+    String? profileAvatar,
+    String? profileAvatarPath,
+  }) {
     return SettingsState(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderTime: reminderTime ?? this.reminderTime,
+      profileName: profileName ?? this.profileName,
+      profileAvatar: profileAvatar ?? this.profileAvatar,
+      profileAvatarPath: profileAvatarPath ?? this.profileAvatarPath,
     );
   }
 }
 
 class SettingsNotifier extends StateNotifier<SettingsState> {
+  static const defaultProfileName = '耳朵Strive';
+  static const defaultProfileAvatar = 'default';
+
   SettingsNotifier()
     : super(
         SettingsState(
           reminderEnabled: true,
           reminderTime: const TimeOfDay(hour: 21, minute: 0),
+          profileName: defaultProfileName,
+          profileAvatar: defaultProfileAvatar,
+          profileAvatarPath: null,
         ),
       ) {
     _loadSettings();
@@ -43,9 +67,27 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       where: 'key = ?',
       whereArgs: ['reminder_time'],
     );
+    final nameResult = await db.query(
+      'app_kv',
+      where: 'key = ?',
+      whereArgs: ['profile_name'],
+    );
+    final avatarResult = await db.query(
+      'app_kv',
+      where: 'key = ?',
+      whereArgs: ['profile_avatar'],
+    );
+    final avatarPathResult = await db.query(
+      'app_kv',
+      where: 'key = ?',
+      whereArgs: ['profile_avatar_path'],
+    );
 
     bool enabled = true;
     TimeOfDay time = const TimeOfDay(hour: 21, minute: 0);
+    String profileName = defaultProfileName;
+    String profileAvatar = defaultProfileAvatar;
+    String? profileAvatarPath;
 
     if (enabledResult.isNotEmpty) {
       enabled = enabledResult.first['value'] == '1';
@@ -62,7 +104,25 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       }
     }
 
-    state = SettingsState(reminderEnabled: enabled, reminderTime: time);
+    if (nameResult.isNotEmpty) {
+      profileName = nameResult.first['value'] as String;
+    }
+
+    if (avatarResult.isNotEmpty) {
+      profileAvatar = avatarResult.first['value'] as String;
+    }
+
+    if (avatarPathResult.isNotEmpty) {
+      profileAvatarPath = avatarPathResult.first['value'] as String;
+    }
+
+    state = SettingsState(
+      reminderEnabled: enabled,
+      reminderTime: time,
+      profileName: profileName,
+      profileAvatar: profileAvatar,
+      profileAvatarPath: profileAvatarPath,
+    );
   }
 
   Future<void> setReminderEnabled(bool enabled) async {
@@ -75,6 +135,32 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(reminderTime: time);
     await _saveSetting('reminder_time', '${time.hour}:${time.minute}');
     await _updateNotification();
+  }
+
+  Future<void> setProfileName(String name) async {
+    state = state.copyWith(profileName: name);
+    await _saveSetting('profile_name', name);
+  }
+
+  Future<void> setProfileAvatar(String avatarKey) async {
+    state = state.copyWith(profileAvatar: avatarKey);
+    await _saveSetting('profile_avatar', avatarKey);
+  }
+
+  Future<void> setProfileAvatarPath(String? path) async {
+    state = state.copyWith(profileAvatarPath: path);
+    await _saveSetting('profile_avatar_path', path ?? '');
+  }
+
+  Future<void> resetProfile() async {
+    state = state.copyWith(
+      profileName: defaultProfileName,
+      profileAvatar: defaultProfileAvatar,
+      profileAvatarPath: null,
+    );
+    await _saveSetting('profile_name', defaultProfileName);
+    await _saveSetting('profile_avatar', defaultProfileAvatar);
+    await _saveSetting('profile_avatar_path', '');
   }
 
   Future<void> _saveSetting(String key, String value) async {
