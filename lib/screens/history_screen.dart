@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,13 +17,29 @@ class HistoryScreen extends ConsumerStatefulWidget {
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   int _selectedTab = 0; // 0: 7天, 1: 30天, 2: 自定义
+  DateTimeRange? _customRange;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _customRange = DateTimeRange(
+      start: now.subtract(const Duration(days: 6)),
+      end: now,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 0 -> 7 days, 1 -> 30 days, 2 -> 0 (all/custom)
-    final days = _selectedTab == 0 ? 7 : (_selectedTab == 1 ? 30 : 0);
-    final historyDataAsync = ref.watch(historyRecordsProvider(days));
-    final chartDataAsync = ref.watch(historyChartProvider(days));
+    final query = _selectedTab == 0
+        ? const HistoryQuery.days(7)
+        : _selectedTab == 1
+        ? const HistoryQuery.days(30)
+        : HistoryQuery.range(
+            HistoryRange(start: _customRange!.start, end: _customRange!.end),
+          );
+    final historyDataAsync = ref.watch(historyRecordsProvider(query));
+    final chartDataAsync = ref.watch(historyChartProvider(query));
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -36,7 +54,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 padding: const EdgeInsets.only(bottom: 24),
                 child: Column(
                   children: [
-                    _buildTabs(),
+                    _buildTabsSection(),
                     _buildChartContainer(chartDataAsync),
                     _buildList(historyDataAsync),
                   ],
@@ -69,24 +87,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
             ),
           ),
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Icon(
-                FontAwesomeIcons.filter,
-                size: 14,
-                color: Colors.grey,
-              ),
-            ),
-          ),
+          const SizedBox.shrink(),
         ],
       ),
     );
+  }
+
+  Widget _buildTabsSection() {
+    return Column(children: [_buildTabs(), _buildCustomRangeSelector()]);
   }
 
   Widget _buildTabs() {
@@ -113,11 +121,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final isSelected = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedTab = index;
-          });
-        },
+        onTap: () => _handleTabTap(index),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 6),
           decoration: BoxDecoration(
@@ -149,6 +153,127 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
+  Widget _buildCustomRangeSelector() {
+    if (_selectedTab != 2) {
+      return const SizedBox.shrink();
+    }
+
+    final range = _customRange;
+    final text = range == null
+        ? '请选择日期范围'
+        : '${DateFormat('MM月dd日').format(range.start)} - ${DateFormat('MM月dd日').format(range.end)}';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+      child: GestureDetector(
+        onTap: _pickCustomRange,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[100]!),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                FontAwesomeIcons.calendarDays,
+                size: 14,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                text,
+                style: GoogleFonts.notoSans(
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleTabTap(int index) async {
+    if (index == 2) {
+      final picked = await _showCustomRangePicker();
+      if (!mounted) {
+        return;
+      }
+      if (picked != null) {
+        setState(() {
+          _selectedTab = index;
+          _customRange = picked;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _selectedTab = index;
+    });
+  }
+
+  Future<void> _pickCustomRange() async {
+    final picked = await _showCustomRangePicker();
+    if (!mounted || picked == null) {
+      return;
+    }
+    setState(() {
+      _customRange = picked;
+    });
+  }
+
+  Future<DateTimeRange?> _showCustomRangePicker() async {
+    final now = DateTime.now();
+    final initialRange =
+        _customRange ??
+        DateTimeRange(start: now.subtract(const Duration(days: 6)), end: now);
+    return showDateRangePicker(
+      context: context,
+      initialDateRange: initialRange,
+      firstDate: DateTime(2020),
+      lastDate: now,
+    );
+  }
+
+  double _calculateInterval(double minY, double maxY) {
+    final range = maxY - minY;
+    if (range <= 40) return 10;
+    if (range <= 80) return 20;
+    if (range <= 160) return 40;
+    return 60;
+  }
+
+  Widget _buildLegendItem({required Color color, required String label}) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.notoSans(
+            textStyle: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildChartContainer(
     AsyncValue<List<Map<String, dynamic>>> chartDataAsync,
   ) {
@@ -176,19 +301,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               return const Center(child: Text('暂无数据'));
             }
 
-            // Calculate overall average for display
-            int totalSys = 0;
-            int totalDia = 0;
+            double totalSys = 0;
+            double totalDia = 0;
             int count = 0;
             int minSys = 999, maxSys = 0;
             int minDia = 999, maxDia = 0;
 
             for (var d in data) {
               if (d['hasData']) {
-                final sys = (d['systolic'] as double).round();
-                final dia = (d['diastolic'] as double).round();
-                totalSys += sys;
-                totalDia += dia;
+                final sysD = (d['systolic'] as double);
+                final diaD = (d['diastolic'] as double);
+                totalSys += sysD;
+                totalDia += diaD;
+                final sys = sysD.round();
+                final dia = diaD.round();
                 count++;
 
                 if (sys < minSys) minSys = sys;
@@ -198,8 +324,31 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               }
             }
 
-            final avgSys = count > 0 ? (totalSys / count).round() : 0;
-            final avgDia = count > 0 ? (totalDia / count).round() : 0;
+            final avgSys = count > 0
+                ? (totalSys / count).toStringAsFixed(1)
+                : '0.0';
+            final avgDia = count > 0
+                ? (totalDia / count).toStringAsFixed(1)
+                : '0.0';
+            final minValue = min(minSys, minDia);
+            final maxValue = max(maxSys, maxDia);
+            double minY = ((minValue - 10) / 10).floorToDouble() * 10;
+            double maxY = ((maxValue + 10) / 10).ceilToDouble() * 10;
+            if (minY < 0) minY = 0;
+            if (maxY <= minY) maxY = minY + 10;
+            final yInterval = _calculateInterval(minY, maxY);
+            final sysSpots = data.asMap().entries.map((e) {
+              if (!(e.value['hasData'] as bool)) {
+                return FlSpot.nullSpot;
+              }
+              return FlSpot(e.key.toDouble(), (e.value['systolic'] as double));
+            }).toList();
+            final diaSpots = data.asMap().entries.map((e) {
+              if (!(e.value['hasData'] as bool)) {
+                return FlSpot.nullSpot;
+              }
+              return FlSpot(e.key.toDouble(), (e.value['diastolic'] as double));
+            }).toList();
 
             return Column(
               children: [
@@ -260,6 +409,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildLegendItem(color: Colors.blue[500]!, label: '收缩压'),
+                    const SizedBox(width: 16),
+                    _buildLegendItem(color: Colors.indigo[200]!, label: '舒张压'),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   height: 160,
@@ -268,7 +426,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       gridData: FlGridData(
                         show: true,
                         drawVerticalLine: false,
-                        horizontalInterval: 20,
+                        horizontalInterval: yInterval,
                         getDrawingHorizontalLine: (value) {
                           return FlLine(
                             color: Colors.grey[100],
@@ -284,8 +442,26 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         topTitles: const AxisTitles(
                           sideTitles: SideTitles(showTitles: false),
                         ),
-                        leftTitles: const AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 34,
+                            interval: yInterval,
+                            getTitlesWidget: (value, meta) {
+                              const style = TextStyle(
+                                color: Colors.grey,
+                                fontSize: 10,
+                              );
+                              return SideTitleWidget(
+                                axisSide: meta.axisSide,
+                                space: 6,
+                                child: Text(
+                                  value.toStringAsFixed(0),
+                                  style: style,
+                                ),
+                              );
+                            },
+                          ),
                         ),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
@@ -322,22 +498,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                       borderData: FlBorderData(show: false),
                       minX: 0,
                       maxX: (data.length - 1).toDouble(),
-                      minY: 40,
-                      maxY: 180, // slightly higher max
+                      minY: minY,
+                      maxY: maxY,
                       lineBarsData: [
-                        // Systolic Line
                         LineChartBarData(
-                          spots: data
-                              .asMap()
-                              .entries
-                              .where((e) => e.value['hasData'])
-                              .map((e) {
-                                return FlSpot(
-                                  e.key.toDouble(),
-                                  (e.value['systolic'] as double),
-                                );
-                              })
-                              .toList(),
+                          spots: sysSpots,
                           isCurved: true,
                           color: Colors.blue[500],
                           barWidth: 3,
@@ -345,19 +510,8 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                           dotData: const FlDotData(show: false),
                           belowBarData: BarAreaData(show: false),
                         ),
-                        // Diastolic Line
                         LineChartBarData(
-                          spots: data
-                              .asMap()
-                              .entries
-                              .where((e) => e.value['hasData'])
-                              .map((e) {
-                                return FlSpot(
-                                  e.key.toDouble(),
-                                  (e.value['diastolic'] as double),
-                                );
-                              })
-                              .toList(),
+                          spots: diaSpots,
                           isCurved: true,
                           color: Colors.indigo[200],
                           barWidth: 3,
