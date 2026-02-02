@@ -1,6 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:my_first_app/models/blood_pressure_record.dart';
+import 'package:my_blood_pressure/models/blood_pressure_record.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -18,11 +18,7 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: _createDB,
-    );
+    return await openDatabase(path, version: 1, onCreate: _createDB);
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -39,7 +35,7 @@ class DatabaseHelper {
         updated_at_ms INTEGER NOT NULL
       )
     ''');
-    
+
     // Index for measure_time_ms
     await db.execute(
       'CREATE INDEX idx_bpr_measure_time_ms ON blood_pressure_record(measure_time_ms)',
@@ -65,7 +61,7 @@ class DatabaseHelper {
         FOREIGN KEY (tag_id) REFERENCES tag (id) ON DELETE CASCADE
       )
     ''');
-    
+
     // Index for tag_id
     await db.execute(
       'CREATE INDEX idx_record_tag_tag_id ON record_tag(tag_id)',
@@ -79,7 +75,7 @@ class DatabaseHelper {
         updated_at_ms INTEGER NOT NULL
       )
     ''');
-    
+
     // Initialize default tags
     await _insertDefaultTags(db);
   }
@@ -150,15 +146,15 @@ class DatabaseHelper {
       whereArgs: [id],
     );
   }
-  
+
   // --- Tag Operations ---
-  
+
   Future<List<Tag>> getAllTags() async {
     final db = await instance.database;
     final result = await db.query('tag', orderBy: 'id ASC');
     return result.map((json) => Tag.fromMap(json)).toList();
   }
-  
+
   Future<int> createTag(Tag tag) async {
     final db = await instance.database;
     return await db.insert('tag', tag.toMap());
@@ -176,31 +172,27 @@ class DatabaseHelper {
 
   Future<int> deleteTag(int id) async {
     final db = await instance.database;
-    return await db.delete(
-      'tag',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.delete('tag', where: 'id = ?', whereArgs: [id]);
   }
-  
+
   // --- Record-Tag Operations ---
-  
+
   Future<void> addTagToRecord(int recordId, int tagId) async {
     final db = await instance.database;
-    await db.insert('record_tag', {
-      'record_id': recordId,
-      'tag_id': tagId,
-    });
+    await db.insert('record_tag', {'record_id': recordId, 'tag_id': tagId});
   }
-  
+
   Future<List<Tag>> getTagsForRecord(int recordId) async {
     final db = await instance.database;
-    final result = await db.rawQuery('''
+    final result = await db.rawQuery(
+      '''
       SELECT t.* FROM tag t
       INNER JOIN record_tag rt ON t.id = rt.tag_id
       WHERE rt.record_id = ?
-    ''', [recordId]);
-    
+    ''',
+      [recordId],
+    );
+
     return result.map((json) => Tag.fromMap(json)).toList();
   }
 

@@ -1,4 +1,4 @@
-package com.example.my_first_app
+package com.example.my_blood_pressure
 
 import io.flutter.embedding.android.FlutterActivity
 

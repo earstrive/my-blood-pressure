@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:my_first_app/models/blood_pressure_record.dart';
-import 'package:my_first_app/providers/record_provider.dart';
-import 'package:my_first_app/providers/settings_provider.dart';
-import 'package:my_first_app/services/database_helper.dart';
-import 'package:my_first_app/services/notification_service.dart';
+import 'package:my_blood_pressure/models/blood_pressure_record.dart';
+import 'package:my_blood_pressure/providers/record_provider.dart';
+import 'package:my_blood_pressure/providers/settings_provider.dart';
+import 'package:my_blood_pressure/services/database_helper.dart';
+import 'package:my_blood_pressure/services/notification_service.dart';
 
 class AddRecordScreen extends ConsumerStatefulWidget {
   const AddRecordScreen({super.key});

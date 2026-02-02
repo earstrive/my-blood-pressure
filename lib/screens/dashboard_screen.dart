@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:my_first_app/screens/add_record_screen.dart';
-import 'package:my_first_app/screens/history_screen.dart';
-import 'package:my_first_app/screens/home_screen.dart';
-import 'package:my_first_app/screens/settings_screen.dart';
+import 'package:my_blood_pressure/screens/add_record_screen.dart';
+import 'package:my_blood_pressure/screens/history_screen.dart';
+import 'package:my_blood_pressure/screens/home_screen.dart';
+import 'package:my_blood_pressure/screens/settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});

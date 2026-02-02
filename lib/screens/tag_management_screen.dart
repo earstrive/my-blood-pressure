@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:my_first_app/models/blood_pressure_record.dart';
-import 'package:my_first_app/services/database_helper.dart';
+import 'package:my_blood_pressure/models/blood_pressure_record.dart';
+import 'package:my_blood_pressure/services/database_helper.dart';
 
 class TagManagementScreen extends ConsumerStatefulWidget {
   const TagManagementScreen({super.key});
@@ -73,8 +73,9 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
   Future<void> _showTagDialog({Tag? tag}) async {
     final isEditing = tag != null;
     final controller = TextEditingController(text: tag?.name);
-    Color selectedColor =
-        tag?.color != null ? Color(tag!.color!) : _presetColors[0];
+    Color selectedColor = tag?.color != null
+        ? Color(tag!.color!)
+        : _presetColors[0];
 
     await showDialog(
       context: context,
@@ -253,11 +254,19 @@ class _TagManagementScreenState extends ConsumerState<TagManagementScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, size: 20, color: Colors.grey),
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
                           onPressed: () => _showTagDialog(tag: tag),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete, size: 20, color: Colors.grey),
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 20,
+                            color: Colors.grey,
+                          ),
                           onPressed: () => _deleteTag(tag),
                         ),
                       ],

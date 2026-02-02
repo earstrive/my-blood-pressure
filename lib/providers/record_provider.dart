@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_first_app/models/blood_pressure_record.dart';
-import 'package:my_first_app/services/database_helper.dart';
+import 'package:my_blood_pressure/models/blood_pressure_record.dart';
+import 'package:my_blood_pressure/services/database_helper.dart';
 
 class RecordWithTags {
   final BloodPressureRecord record;
@@ -35,9 +35,7 @@ class HistoryQuery {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is HistoryQuery &&
-        other.days == days &&
-        other.range == range;
+    return other is HistoryQuery && other.days == days && other.range == range;
   }
 
   @override
@@ -87,62 +85,63 @@ final recentRecordsProvider = FutureProvider<List<RecordWithTags>>((ref) async {
 
 // Provider for history records with time range filtering
 final historyRecordsProvider =
-    FutureProvider.family<List<RecordWithTags>, HistoryQuery>(
-  (ref, query) async {
-    final records = await ref.watch(recordsProvider.future);
-    if (records.isEmpty) return [];
+    FutureProvider.family<List<RecordWithTags>, HistoryQuery>((
+      ref,
+      query,
+    ) async {
+      final records = await ref.watch(recordsProvider.future);
+      if (records.isEmpty) return [];
 
-    List<BloodPressureRecord> filteredRecords = records;
+      List<BloodPressureRecord> filteredRecords = records;
 
-    if (query.range != null) {
-      final startDate = DateTime(
-        query.range!.start.year,
-        query.range!.start.month,
-        query.range!.start.day,
-      );
-      final endDate = DateTime(
-        query.range!.end.year,
-        query.range!.end.month,
-        query.range!.end.day,
-        23,
-        59,
-        59,
-        999,
-      );
-      final startMs = startDate.millisecondsSinceEpoch;
-      final endMs = endDate.millisecondsSinceEpoch;
+      if (query.range != null) {
+        final startDate = DateTime(
+          query.range!.start.year,
+          query.range!.start.month,
+          query.range!.start.day,
+        );
+        final endDate = DateTime(
+          query.range!.end.year,
+          query.range!.end.month,
+          query.range!.end.day,
+          23,
+          59,
+          59,
+          999,
+        );
+        final startMs = startDate.millisecondsSinceEpoch;
+        final endMs = endDate.millisecondsSinceEpoch;
 
-      filteredRecords = records
-          .where(
-            (r) => r.measureTimeMs >= startMs && r.measureTimeMs <= endMs,
-          )
-          .toList();
-    } else if ((query.days ?? 0) > 0) {
-      final days = query.days ?? 0;
-      final now = DateTime.now();
-      final startDate = DateTime(
-        now.year,
-        now.month,
-        now.day,
-      ).subtract(Duration(days: days - 1));
-      final startMs = startDate.millisecondsSinceEpoch;
+        filteredRecords = records
+            .where(
+              (r) => r.measureTimeMs >= startMs && r.measureTimeMs <= endMs,
+            )
+            .toList();
+      } else if ((query.days ?? 0) > 0) {
+        final days = query.days ?? 0;
+        final now = DateTime.now();
+        final startDate = DateTime(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: days - 1));
+        final startMs = startDate.millisecondsSinceEpoch;
 
-      filteredRecords = records
-          .where((r) => r.measureTimeMs >= startMs)
-          .toList();
-    }
+        filteredRecords = records
+            .where((r) => r.measureTimeMs >= startMs)
+            .toList();
+      }
 
-    final dbHelper = DatabaseHelper.instance;
-    List<RecordWithTags> result = [];
+      final dbHelper = DatabaseHelper.instance;
+      List<RecordWithTags> result = [];
 
-    for (var record in filteredRecords) {
-      final tags = await dbHelper.getTagsForRecord(record.id!);
-      result.add(RecordWithTags(record: record, tags: tags));
-    }
+      for (var record in filteredRecords) {
+        final tags = await dbHelper.getTagsForRecord(record.id!);
+        result.add(RecordWithTags(record: record, tags: tags));
+      }
 
-    return result;
-  },
-);
+      return result;
+    });
 
 // Provider for history chart data (daily averages for the selected range)
 final historyChartProvider =
