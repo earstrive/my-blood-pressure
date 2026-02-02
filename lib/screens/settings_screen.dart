@@ -119,7 +119,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final path =
           '${directory.path}/blood_pressure_data_${DateTime.now().millisecondsSinceEpoch}.csv';
       final file = File(path);
-      await file.writeAsString(csv);
+      // Add UTF-8 BOM for Excel compatibility
+      await file.writeAsString('\uFEFF$csv');
 
       await SharePlus.instance.share(
         ShareParams(files: [XFile(path)], text: '我的血压记录'),
