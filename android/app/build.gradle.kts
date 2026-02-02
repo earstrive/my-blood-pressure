@@ -43,21 +43,6 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
-
-    applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .forEach { output ->
-                val abi = output.filters.find { it.identifier == "ABI" }?.value
-                val versionName = variant.versionName
-                if (abi != null) {
-                    output.outputFileName = "my_blood_pressure-$abi-v$versionName.apk"
-                } else {
-                    output.outputFileName = "my_blood_pressure-v$versionName.apk"
-                }
-            }
-    }
 }
 
 flutter {
