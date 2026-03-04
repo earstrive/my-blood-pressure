@@ -147,6 +147,135 @@ class DatabaseHelper {
     );
   }
 
+  Future<int> countDistinctRecordDays({
+    required int startMs,
+    required int endMs,
+    int? tagId,
+    String? keyword,
+  }) async {
+    final db = await instance.database;
+    final kw = (keyword ?? '').trim();
+    final hasKw = kw.isNotEmpty;
+
+    final args = <Object?>[startMs, endMs];
+    final where = <String>['r.measure_time_ms >= ?', 'r.measure_time_ms <= ?'];
+
+    final join = <String>[];
+    if (tagId != null) {
+      join.add('INNER JOIN record_tag rt ON r.id = rt.record_id');
+      where.add('rt.tag_id = ?');
+      args.add(tagId);
+    }
+
+    if (hasKw) {
+      where.add('(r.note LIKE ? OR CAST(r.id AS TEXT) LIKE ?)');
+      final like = '%$kw%';
+      args.add(like);
+      args.add(like);
+    }
+
+    final result = await db.rawQuery('''
+      SELECT COUNT(*) AS cnt FROM (
+        SELECT date(r.measure_time_ms / 1000, 'unixepoch', 'localtime') AS day
+        FROM blood_pressure_record r
+        ${join.join('\n')}
+        WHERE ${where.join(' AND ')}
+        GROUP BY day
+      ) t
+      ''', args);
+
+    final v = result.first['cnt'];
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    return int.tryParse(v?.toString() ?? '') ?? 0;
+  }
+
+  Future<List<String>> readDistinctRecordDayStringsPaged({
+    required int startMs,
+    required int endMs,
+    required int limit,
+    required int offset,
+    int? tagId,
+    String? keyword,
+  }) async {
+    final db = await instance.database;
+    final kw = (keyword ?? '').trim();
+    final hasKw = kw.isNotEmpty;
+
+    final args = <Object?>[startMs, endMs];
+    final where = <String>['r.measure_time_ms >= ?', 'r.measure_time_ms <= ?'];
+
+    final join = <String>[];
+    if (tagId != null) {
+      join.add('INNER JOIN record_tag rt ON r.id = rt.record_id');
+      where.add('rt.tag_id = ?');
+      args.add(tagId);
+    }
+
+    if (hasKw) {
+      where.add('(r.note LIKE ? OR CAST(r.id AS TEXT) LIKE ?)');
+      final like = '%$kw%';
+      args.add(like);
+      args.add(like);
+    }
+
+    args.add(limit);
+    args.add(offset);
+
+    final result = await db.rawQuery('''
+      SELECT date(r.measure_time_ms / 1000, 'unixepoch', 'localtime') AS day
+      FROM blood_pressure_record r
+      ${join.join('\n')}
+      WHERE ${where.join(' AND ')}
+      GROUP BY day
+      ORDER BY day DESC
+      LIMIT ? OFFSET ?
+      ''', args);
+
+    return result
+        .map((row) => row['day']?.toString())
+        .whereType<String>()
+        .toList();
+  }
+
+  Future<List<BloodPressureRecord>> readRecordsInRange({
+    required int startMs,
+    required int endMs,
+    int? tagId,
+    String? keyword,
+  }) async {
+    final db = await instance.database;
+    final kw = (keyword ?? '').trim();
+    final hasKw = kw.isNotEmpty;
+
+    final args = <Object?>[startMs, endMs];
+    final where = <String>['r.measure_time_ms >= ?', 'r.measure_time_ms <= ?'];
+
+    final join = <String>[];
+    if (tagId != null) {
+      join.add('INNER JOIN record_tag rt ON r.id = rt.record_id');
+      where.add('rt.tag_id = ?');
+      args.add(tagId);
+    }
+
+    if (hasKw) {
+      where.add('(r.note LIKE ? OR CAST(r.id AS TEXT) LIKE ?)');
+      final like = '%$kw%';
+      args.add(like);
+      args.add(like);
+    }
+
+    final result = await db.rawQuery('''
+      SELECT DISTINCT r.*
+      FROM blood_pressure_record r
+      ${join.join('\n')}
+      WHERE ${where.join(' AND ')}
+      ORDER BY r.measure_time_ms DESC
+      ''', args);
+
+    return result.map((json) => BloodPressureRecord.fromMap(json)).toList();
+  }
+
   // --- Tag Operations ---
 
   Future<List<Tag>> getAllTags() async {
@@ -194,6 +323,29 @@ class DatabaseHelper {
     );
 
     return result.map((json) => Tag.fromMap(json)).toList();
+  }
+
+  Future<void> setTagsForRecord(int recordId, List<int> tagIds) async {
+    final db = await instance.database;
+
+    await db.delete(
+      'record_tag',
+      where: 'record_id = ?',
+      whereArgs: [recordId],
+    );
+
+    if (tagIds.isEmpty) {
+      return;
+    }
+
+    final batch = db.batch();
+    for (final tagId in tagIds) {
+      batch.insert('record_tag', {
+        'record_id': recordId,
+        'tag_id': tagId,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+    await batch.commit(noResult: true);
   }
 
   Future<void> close() async {

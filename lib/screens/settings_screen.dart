@@ -9,11 +9,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:my_blood_pressure/providers/settings_provider.dart';
 import 'package:my_blood_pressure/services/database_helper.dart';
-import 'package:my_blood_pressure/services/notification_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:my_blood_pressure/screens/data_management_screen.dart';
 import 'package:my_blood_pressure/screens/tag_management_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -46,35 +46,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       color: Color(0xFF81C784),
     ),
   ];
-
-  Future<void> _testNotification() async {
-    try {
-      final ns = NotificationService();
-      await ns.showNotification(
-        id: 999,
-        title: '测试通知',
-        body: '这是一条测试通知，证明通知功能正常工作。',
-      );
-
-      final permInfo = await ns.getPermissionDebugInfo();
-
-      if (mounted) {
-        final debugInfo = ns.debugInfo;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('测试通知已发送\n$permInfo\n$debugInfo'),
-            duration: const Duration(seconds: 8),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('发送失败: $e')));
-      }
-    }
-  }
 
   Future<void> _exportData() async {
     try {
@@ -615,20 +586,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     }
                   },
                 ),
-                if (false)
-                  _buildListItem(
-                    icon: FontAwesomeIcons.bell,
-                    iconColor: Colors.blue[500]!,
-                    iconBgColor: Colors.transparent,
-                    title: '测试通知',
-                    trailing: const Icon(
-                      FontAwesomeIcons.chevronRight,
-                      size: 14,
-                      color: Colors.grey,
-                    ),
-                    showBorder: false,
-                    onTap: _testNotification,
-                  ),
               ],
             ),
           ),
@@ -680,6 +637,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
                 _buildListItem(
+                  icon: FontAwesomeIcons.database,
+                  iconColor: Colors.indigo[500]!,
+                  iconBgColor: Colors.indigo[50]!,
+                  title: '管理数据',
+                  trailing: const Icon(
+                    FontAwesomeIcons.chevronRight,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  showBorder: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DataManagementScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildListItem(
                   icon: FontAwesomeIcons.fileExport,
                   iconColor: Colors.green[500]!,
                   iconBgColor: Colors.green[50]!,
@@ -692,20 +669,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   showBorder: true,
                   onTap: _exportData,
                 ),
-                if (false)
-                  _buildListItem(
-                    icon: FontAwesomeIcons.cloudArrowUp,
-                    iconColor: Colors.purple[500]!,
-                    iconBgColor: Colors.purple[50]!,
-                    title: '数据备份',
-                    trailing: const Icon(
-                      FontAwesomeIcons.chevronRight,
-                      size: 14,
-                      color: Colors.grey,
-                    ),
-                    showBorder: false,
-                    onTap: () {},
-                  ),
               ],
             ),
           ),
@@ -735,27 +698,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             child: Column(
               children: [
-                if (false)
-                  _buildListItem(
-                    icon: FontAwesomeIcons.star,
-                    iconColor: Colors.orange[500]!,
-                    iconBgColor: Colors.orange[50]!,
-                    title: '去评分',
-                    trailing: const Icon(
-                      FontAwesomeIcons.chevronRight,
-                      size: 14,
-                      color: Colors.grey,
-                    ),
-                    showBorder: true,
-                    onTap: () {},
-                  ),
                 _buildListItem(
                   icon: FontAwesomeIcons.circleInfo,
                   iconColor: Colors.grey[500]!,
                   iconBgColor: Colors.grey[100]!,
                   title: '关于我们',
                   trailing: Text(
-                    'v1.0.0',
+                    'v1.1.0',
                     style: GoogleFonts.notoSans(
                       textStyle: const TextStyle(
                         fontSize: 14,

@@ -45,23 +45,28 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildTrendStat(String label, String value) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.notoSans(
-              textStyle: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.notoSans(
+            textStyle: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
             style: GoogleFonts.notoSans(
               textStyle: const TextStyle(
                 fontSize: 13,
@@ -70,8 +75,8 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -509,11 +514,20 @@ class HomeScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        _buildTrendStat('平均', '$avgSys/$avgDia'),
+                        Expanded(
+                          flex: 2,
+                          child: _buildTrendStat('平均', '$avgSys/$avgDia'),
+                        ),
+                        const SizedBox(width: 18),
+                        Expanded(
+                          flex: 3,
+                          child: _buildTrendStat('范围', rangeText),
+                        ),
                         const SizedBox(width: 12),
-                        _buildTrendStat('范围', rangeText),
-                        const SizedBox(width: 12),
-                        _buildTrendStat('记录', '$count天'),
+                        Expanded(
+                          flex: 1,
+                          child: _buildTrendStat('记录', '$count天'),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
